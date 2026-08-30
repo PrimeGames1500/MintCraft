@@ -1,5 +1,9 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.js";
 
+// =========================
+// SETUP
+// =========================
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 
@@ -10,223 +14,515 @@ const camera = new THREE.PerspectiveCamera(
     1000
 );
 
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({
+    antialias: true
+});
+
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+
+document.body.innerHTML = "";
 document.body.appendChild(renderer.domElement);
 
-// Lighting
-scene.add(new THREE.HemisphereLight(0xffffff, 0x555555, 2));
+// =========================
+// LIGHTING
+// =========================
 
-// Block materials
-const grass = new THREE.MeshLambertMaterial({ color: 0x55aa33 });
-const dirt = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
-const stone = new THREE.MeshLambertMaterial({ color: 0x777777 });
+const sunlight = new THREE.DirectionalLight(0xffffff, 2);
+sunlight.position.set(10, 20, 10);
+scene.add(sunlight);
 
-// Selected block
-let selectedMaterial = grass;
+const ambientLight = new THREE.HemisphereLight(
+    0xffffff,
+    0x555555,
+    1.5
+);
 
-// Store all blocks
+scene.add(ambientLight);
+
+// =========================
+// BLOCK TYPES
+// =========================
+
+const grassMaterial = new THREE.MeshLambertMaterial({
+    color: 0x55aa33
+});
+
+const dirtMaterial = new THREE.MeshLambertMaterial({
+    color: 0x8b5a2b
+});
+
+const stoneMaterial = new THREE.MeshLambertMaterial({
+    color: 0x777777
+});
+
+// Currently selected block
+let selectedMaterial = grassMaterial;
+
+// =========================
+// BLOCK STORAGE
+// =========================
+
 const blocks = [];
 
-// Create block
+// =========================
+// CREATE BLOCK
+// =========================
+
 function createBlock(x, y, z, material) {
+
     const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const cube = new THREE.Mesh(geometry, material);
+
+    const cube = new THREE.Mesh(
+        geometry,
+        material
+    );
 
     cube.position.set(x, y, z);
+
     scene.add(cube);
+
     blocks.push(cube);
 
     return cube;
 }
 
-// Create world
+// =========================
+// CREATE WORLD
+// =========================
+
 for (let x = -10; x <= 10; x++) {
+
     for (let z = -10; z <= 10; z++) {
-        createBlock(x, 0, z, grass);
-        createBlock(x, -1, z, dirt);
+
+        // Grass
+        createBlock(
+            x,
+            0,
+            z,
+            grassMaterial
+        );
+
+        // Dirt
+        createBlock(
+            x,
+            -1,
+            z,
+            dirtMaterial
+        );
+
+        // Stone
+        createBlock(
+            x,
+            -2,
+            z,
+            stoneMaterial
+        );
     }
 }
 
-// Player
-camera.position.set(0, 2, 5);
+// =========================
+// PLAYER
+// =========================
 
-let mouseLocked = false;
+camera.position.set(
+    0,
+    2,
+    5
+);
+
 let yaw = 0;
 let pitch = 0;
 
-// Mouse lock
-renderer.domElement.addEventListener("click", () => {
-    renderer.domElement.requestPointerLock();
-});
+let mouseLocked = false;
 
-document.addEventListener("pointerlockchange", () => {
-    mouseLocked = document.pointerLockElement === renderer.domElement;
-});
+// =========================
+// MOUSE LOCK
+// =========================
 
-// Mouse look
-document.addEventListener("mousemove", (event) => {
-    if (!mouseLocked) return;
+renderer.domElement.addEventListener(
+    "click",
+    () => {
 
-    const sensitivity = 0.002;
+        if (!mouseLocked) {
 
-    yaw -= event.movementX * sensitivity;
-    pitch -= event.movementY * sensitivity;
+            renderer.domElement.requestPointerLock();
 
-    pitch = Math.max(
-        -Math.PI / 2,
-        Math.min(Math.PI / 2, pitch)
-    );
+        }
 
-    camera.rotation.order = "YXZ";
-    camera.rotation.y = yaw;
-    camera.rotation.x = pitch;
-});
+    }
+);
 
-// Keyboard
+document.addEventListener(
+    "pointerlockchange",
+    () => {
+
+        mouseLocked =
+            document.pointerLockElement ===
+            renderer.domElement;
+
+    }
+);
+
+// =========================
+// MOUSE LOOK
+// =========================
+
+document.addEventListener(
+    "mousemove",
+    (event) => {
+
+        if (!mouseLocked) return;
+
+        const sensitivity = 0.002;
+
+        yaw -=
+            event.movementX *
+            sensitivity;
+
+        pitch -=
+            event.movementY *
+            sensitivity;
+
+        // Stop camera flipping
+        pitch = Math.max(
+            -Math.PI / 2,
+            Math.min(
+                Math.PI / 2,
+                pitch
+            )
+        );
+
+        camera.rotation.order = "YXZ";
+
+        camera.rotation.y = yaw;
+
+        camera.rotation.x = pitch;
+
+    }
+);
+
+// =========================
+// KEYBOARD
+// =========================
+
 const keys = {};
 
-document.addEventListener("keydown", (event) => {
-    keys[event.code] = true;
+document.addEventListener(
+    "keydown",
+    (event) => {
 
-    // Select blocks
-    if (event.code === "Digit1") selectedMaterial = grass;
-    if (event.code === "Digit2") selectedMaterial = dirt;
-    if (event.code === "Digit3") selectedMaterial = stone;
-});
+        keys[event.code] = true;
 
-document.addEventListener("keyup", (event) => {
-    keys[event.code] = false;
-});
+        // Block selection
+        if (event.code === "Digit1") {
+            selectedMaterial = grassMaterial;
+        }
 
-// Raycaster for block interaction
-const raycaster = new THREE.Raycaster();
+        if (event.code === "Digit2") {
+            selectedMaterial = dirtMaterial;
+        }
 
-// Break block
+        if (event.code === "Digit3") {
+            selectedMaterial = stoneMaterial;
+        }
+
+    }
+);
+
+document.addEventListener(
+    "keyup",
+    (event) => {
+
+        keys[event.code] = false;
+
+    }
+);
+
+// =========================
+// BLOCK RAYCASTING
+// =========================
+
+const raycaster =
+    new THREE.Raycaster();
+
+const screenCenter =
+    new THREE.Vector2(0, 0);
+
+function getTargetBlock() {
+
+    raycaster.setFromCamera(
+        screenCenter,
+        camera
+    );
+
+    const hits =
+        raycaster.intersectObjects(
+            blocks,
+            false
+        );
+
+    if (hits.length === 0) {
+        return null;
+    }
+
+    if (hits[0].distance > 6) {
+        return null;
+    }
+
+    return hits[0];
+}
+
+// =========================
+// BREAK BLOCK
+// =========================
+
 function breakBlock() {
-    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
-    const hits = raycaster.intersectObjects(blocks);
+    const hit =
+        getTargetBlock();
 
-    if (hits.length === 0) return;
+    if (!hit) return;
 
-    const block = hits[0].object;
-
-    // Don't let the player break blocks too far away
-    if (hits[0].distance > 6) return;
+    const block =
+        hit.object;
 
     scene.remove(block);
 
-    const index = blocks.indexOf(block);
+    const index =
+        blocks.indexOf(block);
+
     if (index !== -1) {
-        blocks.splice(index, 1);
+
+        blocks.splice(
+            index,
+            1
+        );
+
     }
+
 }
 
-// Place block
+// =========================
+// PLACE BLOCK
+// =========================
+
 function placeBlock() {
-    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
-    const hits = raycaster.intersectObjects(blocks);
+    const hit =
+        getTargetBlock();
 
-    if (hits.length === 0) return;
+    if (!hit) return;
 
-    const hit = hits[0];
+    const block =
+        hit.object;
 
-    if (hit.distance > 6) return;
+    const normal =
+        hit.face.normal.clone();
 
-    const normal = hit.face.normal;
+    const position =
+        block.position.clone();
 
-    const position = hit.object.position.clone();
+    position.add(normal);
 
-    position.x += normal.x;
-    position.y += normal.y;
-    position.z += normal.z;
+    position.x =
+        Math.round(position.x);
 
-    // Don't place a block inside the player
-    const distanceToPlayer = position.distanceTo(camera.position);
+    position.y =
+        Math.round(position.y);
 
-    if (distanceToPlayer < 1.5) return;
+    position.z =
+        Math.round(position.z);
 
-    // Make sure there isn't already a block there
-    for (const block of blocks) {
-        if (block.position.distanceTo(position) < 0.1) {
+    // Don't put block inside player
+    if (
+        position.distanceTo(
+            camera.position
+        ) < 1.5
+    ) {
+        return;
+    }
+
+    // Don't create duplicate block
+    for (
+        const existingBlock
+        of blocks
+    ) {
+
+        if (
+            existingBlock.position
+                .distanceTo(position) < 0.1
+        ) {
+
             return;
+
         }
+
     }
 
     createBlock(
-        Math.round(position.x),
-        Math.round(position.y),
-        Math.round(position.z),
+        position.x,
+        position.y,
+        position.z,
         selectedMaterial
     );
+
 }
 
-// Mouse buttons
-renderer.domElement.addEventListener("mousedown", (event) => {
-    if (!mouseLocked) return;
+// =========================
+// MOUSE BUTTONS
+// =========================
 
-    // Left click = break
-    if (event.button === 0) {
-        breakBlock();
-    }
+renderer.domElement.addEventListener(
+    "mousedown",
+    (event) => {
 
-    // Right click = place
-    if (event.button === 2) {
-        placeBlock();
+        if (!mouseLocked) return;
+
+        // Left click
+        if (event.button === 0) {
+
+            breakBlock();
+
+        }
+
+        // Right click
+        if (event.button === 2) {
+
+            placeBlock();
+
+        }
+
     }
-});
+);
 
 // Stop right-click menu
-renderer.domElement.addEventListener("contextmenu", (event) => {
-    event.preventDefault();
-});
+renderer.domElement.addEventListener(
+    "contextmenu",
+    (event) => {
 
-// Jump physics
+        event.preventDefault();
+
+    }
+);
+
+// =========================
+// JUMPING
+// =========================
+
 let velocityY = 0;
+
 let onGround = true;
 
 const gravity = 0.012;
+
 const jumpPower = 0.25;
 
-// Game loop
+// =========================
+// GAME LOOP
+// =========================
+
 function animate() {
-    requestAnimationFrame(animate);
+
+    requestAnimationFrame(
+        animate
+    );
 
     const speed = 0.08;
 
     // Movement
-    if (keys["KeyW"]) camera.translateZ(-speed);
-    if (keys["KeyS"]) camera.translateZ(speed);
-    if (keys["KeyA"]) camera.translateX(-speed);
-    if (keys["KeyD"]) camera.translateX(speed);
+    if (keys["KeyW"]) {
+
+        camera.translateZ(
+            -speed
+        );
+
+    }
+
+    if (keys["KeyS"]) {
+
+        camera.translateZ(
+            speed
+        );
+
+    }
+
+    if (keys["KeyA"]) {
+
+        camera.translateX(
+            -speed
+        );
+
+    }
+
+    if (keys["KeyD"]) {
+
+        camera.translateX(
+            speed
+        );
+
+    }
 
     // Jump
-    if (keys["Space"] && onGround) {
-        velocityY = jumpPower;
+    if (
+        keys["Space"] &&
+        onGround
+    ) {
+
+        velocityY =
+            jumpPower;
+
         onGround = false;
+
     }
 
     // Gravity
     velocityY -= gravity;
-    camera.position.y += velocityY;
+
+    camera.position.y +=
+        velocityY;
 
     // Ground
-    if (camera.position.y <= 2) {
+    if (
+        camera.position.y <= 2
+    ) {
+
         camera.position.y = 2;
+
         velocityY = 0;
+
         onGround = true;
+
     }
 
-    renderer.render(scene, camera);
+    renderer.render(
+        scene,
+        camera
+    );
+
 }
 
+// Start game
 animate();
 
-// Resize
-window.addEventListener("resize", () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
+// =========================
+// WINDOW RESIZE
+// =========================
+
+window.addEventListener(
+    "resize",
+    () => {
+
+        camera.aspect =
+            window.innerWidth /
+            window.innerHeight;
+
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(
+            window.innerWidth,
+            window.innerHeight
+        );
+
+    }
+);
