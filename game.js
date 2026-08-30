@@ -20,23 +20,20 @@ const light = new THREE.DirectionalLight(0xffffff, 2);
 light.position.set(10, 20, 10);
 scene.add(light);
 
-const ambient = new THREE.AmbientLight(0xffffff, 1);
-scene.add(ambient);
+scene.add(new THREE.AmbientLight(0xffffff, 1));
 
-// Block materials
+// Blocks
 const grass = new THREE.MeshLambertMaterial({ color: 0x55aa33 });
 const dirt = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
 
-// Create blocks
 function createBlock(x, y, z, material) {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const cube = new THREE.Mesh(geometry, material);
-
     cube.position.set(x, y, z);
     scene.add(cube);
 }
 
-// Create world
+// World
 for (let x = -10; x <= 10; x++) {
     for (let z = -10; z <= 10; z++) {
         createBlock(x, 0, z, grass);
@@ -49,38 +46,48 @@ camera.position.set(0, 2, 5);
 
 const controls = new PointerLockControls(camera, document.body);
 
+// Click to lock mouse
 document.addEventListener("click", () => {
-    controls.lock();
+    if (!controls.isLocked) {
+        controls.lock();
+    }
 });
 
-// Movement
+// Player controls
 const keys = {};
 
 document.addEventListener("keydown", (event) => {
-    keys[event.key.toLowerCase()] = true;
+    keys[event.code] = true;
+
+    // Jump
+    if (event.code === "Space" && onGround) {
+        velocityY = 0.25;
+        onGround = false;
+    }
 });
 
 document.addEventListener("keyup", (event) => {
-    keys[event.key.toLowerCase()] = false;
+    keys[event.code] = false;
 });
 
 // Physics
 let velocityY = 0;
-let onGround = false;
+let onGround = true;
 
-const gravity = 0.015;
-const jumpPower = 0.25;
+const gravity = 0.012;
 
 function animate() {
     requestAnimationFrame(animate);
 
     const speed = 0.08;
 
-    // WASD movement
-    if (keys["w"]) controls.moveForward(speed);
-    if (keys["s"]) controls.moveForward(-speed);
-    if (keys["a"]) controls.moveRight(-speed);
-    if (keys["d"]) controls.moveRight(speed);
+    // Only move when mouse is locked
+    if (controls.isLocked) {
+        if (keys["KeyW"]) controls.moveForward(speed);
+        if (keys["KeyS"]) controls.moveForward(-speed);
+        if (keys["KeyA"]) controls.moveRight(-speed);
+        if (keys["KeyD"]) controls.moveRight(speed);
+    }
 
     // Gravity
     velocityY -= gravity;
@@ -91,14 +98,6 @@ function animate() {
         camera.position.y = 2;
         velocityY = 0;
         onGround = true;
-    } else {
-        onGround = false;
-    }
-
-    // Jump
-    if (keys[" "] && onGround) {
-        velocityY = jumpPower;
-        onGround = false;
     }
 
     renderer.render(scene, camera);
