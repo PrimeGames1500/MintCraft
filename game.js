@@ -1,12 +1,8 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.js";
 
 // =====================================================
-// MINTCRAFT V2
+// MINTCRAFT
 // =====================================================
-
-// -------------------------
-// Scene
-// -------------------------
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
@@ -28,13 +24,13 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.body.innerHTML = "";
 document.body.appendChild(renderer.domElement);
 
-// -------------------------
-// Lighting
-// -------------------------
+// =====================================================
+// LIGHT
+// =====================================================
 
-const sunlight = new THREE.DirectionalLight(0xffffff, 2);
-sunlight.position.set(20, 30, 10);
-scene.add(sunlight);
+const sun = new THREE.DirectionalLight(0xffffff, 2);
+sun.position.set(20, 30, 10);
+scene.add(sun);
 
 scene.add(
     new THREE.HemisphereLight(
@@ -45,83 +41,47 @@ scene.add(
 );
 
 // =====================================================
-// RANDOM SEED
+// BLOCK TYPES
 // =====================================================
 
-const seed = Math.floor(Math.random() * 1000000000);
+const grassMaterial = new THREE.MeshLambertMaterial({
+    color: 0x55aa33
+});
 
-console.log("MintCraft Seed:", seed);
+const dirtMaterial = new THREE.MeshLambertMaterial({
+    color: 0x8b5a2b
+});
 
-// Seeded random number
-function seededRandom(x, z) {
+const stoneMaterial = new THREE.MeshLambertMaterial({
+    color: 0x777777
+});
 
-    const value =
-        Math.sin(
-            x * 127.1 +
-            z * 311.7 +
-            seed * 0.001
-        ) * 43758.5453123;
+const woodMaterial = new THREE.MeshLambertMaterial({
+    color: 0x6b421f
+});
 
-    return value - Math.floor(value);
-}
-
-// =====================================================
-// BLOCK MATERIALS
-// =====================================================
-
-const grassMaterial =
-    new THREE.MeshLambertMaterial({
-        color: 0x55aa33
-    });
-
-const dirtMaterial =
-    new THREE.MeshLambertMaterial({
-        color: 0x8b5a2b
-    });
-
-const stoneMaterial =
-    new THREE.MeshLambertMaterial({
-        color: 0x777777
-    });
-
-const woodMaterial =
-    new THREE.MeshLambertMaterial({
-        color: 0x6b421f
-    });
-
-const leavesMaterial =
-    new THREE.MeshLambertMaterial({
-        color: 0x2f8f35
-    });
+const leavesMaterial = new THREE.MeshLambertMaterial({
+    color: 0x2f8f35
+});
 
 let selectedMaterial = grassMaterial;
 
 // =====================================================
-// BLOCK STORAGE
+// BLOCKS
 // =====================================================
 
 const blocks = [];
 
-// =====================================================
-// BLOCK CREATION
-// =====================================================
-
 function createBlock(x, y, z, material) {
 
-    const geometry =
-        new THREE.BoxGeometry(1, 1, 1);
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
 
-    const block =
-        new THREE.Mesh(
-            geometry,
-            material
-        );
-
-    block.position.set(
-        x,
-        y,
-        z
+    const block = new THREE.Mesh(
+        geometry,
+        material
     );
+
+    block.position.set(x, y, z);
 
     scene.add(block);
     blocks.push(block);
@@ -130,48 +90,59 @@ function createBlock(x, y, z, material) {
 }
 
 // =====================================================
+// RANDOM SEED
+// =====================================================
+
+const seed = Math.floor(
+    Math.random() * 1000000000
+);
+
+console.log("MintCraft Seed:", seed);
+
+function randomNoise(x, z) {
+
+    const value = Math.sin(
+        x * 127.1 +
+        z * 311.7 +
+        seed
+    ) * 43758.5453;
+
+    return value - Math.floor(value);
+}
+
+// =====================================================
 // TERRAIN
 // =====================================================
 
 function getHeight(x, z) {
 
-    const large =
-        Math.sin(
-            (x + seed) * 0.08
-        ) * 3;
+    const hills =
+        Math.sin((x + seed) * 0.12) * 3;
 
-    const medium =
-        Math.cos(
-            (z - seed) * 0.09
-        ) * 3;
+    const valleys =
+        Math.cos((z - seed) * 0.11) * 3;
 
-    const small =
-        Math.sin(
-            (x + z + seed) * 0.18
-        ) * 1.5;
+    const smaller =
+        Math.sin((x + z) * 0.2) * 1.5;
 
     let height =
-        4 +
-        large +
-        medium +
-        small;
-
-    height =
-        Math.round(height);
+        5 +
+        hills +
+        valleys +
+        smaller;
 
     return Math.max(
         1,
-        Math.min(10, height)
+        Math.min(10, Math.round(height))
     );
 }
 
 // =====================================================
-// TREE
+// TREES
 // =====================================================
 
 function createTree(x, y, z) {
 
-    // Trunk
     for (let i = 0; i < 4; i++) {
 
         createBlock(
@@ -183,7 +154,6 @@ function createTree(x, y, z) {
 
     }
 
-    // Leaves
     for (let lx = -2; lx <= 2; lx++) {
 
         for (let lz = -2; lz <= 2; lz++) {
@@ -239,7 +209,6 @@ for (
         const height =
             getHeight(x, z);
 
-        // Underground blocks
         for (
             let y = -4;
             y < height;
@@ -252,20 +221,17 @@ for (
                 y === height - 1
             ) {
 
-                material =
-                    grassMaterial;
+                material = grassMaterial;
 
             } else if (
                 y >= height - 4
             ) {
 
-                material =
-                    dirtMaterial;
+                material = dirtMaterial;
 
             } else {
 
-                material =
-                    stoneMaterial;
+                material = stoneMaterial;
 
             }
 
@@ -278,12 +244,8 @@ for (
 
         }
 
-        // Trees
-        const random =
-            seededRandom(x, z);
-
         if (
-            random > 0.965 &&
+            randomNoise(x, z) > 0.97 &&
             height >= 3 &&
             Math.abs(x) > 3 &&
             Math.abs(z) > 3
@@ -305,32 +267,73 @@ for (
 // PLAYER
 // =====================================================
 
-const player = {
-    width: 0.6,
-    height: 1.8,
-    depth: 0.6
-};
+const PLAYER_HEIGHT = 1.8;
+const PLAYER_RADIUS = 0.3;
 
 camera.position.set(
     0,
-    getHeight(0, 0) + 2,
+    getHeight(0, 5) + 3,
     5
 );
 
-// Vertical velocity
 let velocityY = 0;
-
-let onGround = false;
+let grounded = false;
 
 const gravity = 0.015;
 const jumpPower = 0.27;
+
+// =====================================================
+// KEYBOARD
+// =====================================================
+
+const keys = {};
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        keys[event.code] = true;
+
+        if (event.code === "Digit1") {
+            selectedMaterial = grassMaterial;
+            updateHotbar();
+        }
+
+        if (event.code === "Digit2") {
+            selectedMaterial = dirtMaterial;
+            updateHotbar();
+        }
+
+        if (event.code === "Digit3") {
+            selectedMaterial = stoneMaterial;
+            updateHotbar();
+        }
+
+        if (event.code === "Digit4") {
+            selectedMaterial = woodMaterial;
+            updateHotbar();
+        }
+
+        if (event.code === "Digit5") {
+            selectedMaterial = leavesMaterial;
+            updateHotbar();
+        }
+
+    }
+);
+
+document.addEventListener(
+    "keyup",
+    event => {
+        keys[event.code] = false;
+    }
+);
 
 // =====================================================
 // MOUSE LOOK
 // =====================================================
 
 let mouseLocked = false;
-
 let yaw = 0;
 let pitch = 0;
 
@@ -338,11 +341,7 @@ renderer.domElement.addEventListener(
     "click",
     () => {
 
-        if (!mouseLocked) {
-
-            renderer.domElement.requestPointerLock();
-
-        }
+        renderer.domElement.requestPointerLock();
 
     }
 );
@@ -376,168 +375,62 @@ document.addEventListener(
 
         pitch = Math.max(
             -Math.PI / 2,
-            Math.min(
-                Math.PI / 2,
-                pitch
-            )
+            Math.min(Math.PI / 2, pitch)
         );
 
-        camera.rotation.order =
-            "YXZ";
+        camera.rotation.order = "YXZ";
 
-        camera.rotation.y =
-            yaw;
-
-        camera.rotation.x =
-            pitch;
+        camera.rotation.y = yaw;
+        camera.rotation.x = pitch;
 
     }
 );
 
 // =====================================================
-// KEYBOARD
+// COLLISION HELPERS
 // =====================================================
 
-const keys = {};
+function blockAt(x, y, z) {
 
-document.addEventListener(
-    "keydown",
-    event => {
+    const bx = Math.floor(x);
+    const by = Math.floor(y);
+    const bz = Math.floor(z);
 
-        keys[event.code] = true;
-
-        if (
-            event.code === "Digit1"
-        ) {
-
-            selectedMaterial =
-                grassMaterial;
-
-            updateHotbar();
-
-        }
+    for (const block of blocks) {
 
         if (
-            event.code === "Digit2"
+            Math.round(block.position.x) === bx &&
+            Math.round(block.position.y) === by &&
+            Math.round(block.position.z) === bz
         ) {
 
-            selectedMaterial =
-                dirtMaterial;
-
-            updateHotbar();
-
-        }
-
-        if (
-            event.code === "Digit3"
-        ) {
-
-            selectedMaterial =
-                stoneMaterial;
-
-            updateHotbar();
-
-        }
-
-        if (
-            event.code === "Digit4"
-        ) {
-
-            selectedMaterial =
-                woodMaterial;
-
-            updateHotbar();
-
-        }
-
-        if (
-            event.code === "Digit5"
-        ) {
-
-            selectedMaterial =
-                leavesMaterial;
-
-            updateHotbar();
-
-        }
-
-    }
-);
-
-document.addEventListener(
-    "keyup",
-    event => {
-
-        keys[event.code] = false;
-
-    }
-);
-
-// =====================================================
-// COLLISION
-// =====================================================
-
-function isSolidAt(x, y, z) {
-
-    for (
-        const block of blocks
-    ) {
-
-        const bx =
-            Math.round(block.position.x);
-
-        const by =
-            Math.round(block.position.y);
-
-        const bz =
-            Math.round(block.position.z);
-
-        if (
-            bx === Math.floor(x) &&
-            by === Math.floor(y) &&
-            bz === Math.floor(z)
-        ) {
-
-            return true;
+            return block;
 
         }
 
     }
 
-    return false;
+    return null;
 }
 
-// Find the top of the terrain below player
-function getGroundHeight() {
+function groundHeight(x, z) {
 
-    const px =
-        Math.floor(camera.position.x);
-
-    const pz =
-        Math.floor(camera.position.z);
+    const bx = Math.floor(x);
+    const bz = Math.floor(z);
 
     let highest = -100;
 
-    for (
-        const block of blocks
-    ) {
-
-        const bx =
-            Math.round(block.position.x);
-
-        const bz =
-            Math.round(block.position.z);
+    for (const block of blocks) {
 
         if (
-            bx === px &&
-            bz === pz
+            Math.round(block.position.x) === bx &&
+            Math.round(block.position.z) === bz
         ) {
 
-            highest =
-                Math.max(
-                    highest,
-                    block.position.y + 0.5
-                );
+            highest = Math.max(
+                highest,
+                block.position.y + 0.5
+            );
 
         }
 
@@ -547,69 +440,39 @@ function getGroundHeight() {
 }
 
 // =====================================================
-// MOVEMENT COLLISION
+// MOVEMENT
 // =====================================================
 
-function movePlayer(dx, dz) {
+function tryMove(dx, dz) {
 
-    const oldX =
-        camera.position.x;
+    const oldX = camera.position.x;
+    const oldZ = camera.position.z;
 
-    const oldZ =
-        camera.position.z;
-
-    // Move X
     camera.position.x += dx;
 
-    const groundY =
-        getGroundHeight();
-
     if (
-        camera.position.y <
-        groundY + 1.8
+        blockAt(
+            camera.position.x,
+            camera.position.y - 0.5,
+            camera.position.z
+        )
     ) {
 
-        const checkY =
-            camera.position.y - 0.9;
-
-        if (
-            isSolidAt(
-                camera.position.x,
-                checkY,
-                camera.position.z
-            )
-        ) {
-
-            camera.position.x =
-                oldX;
-
-        }
+        camera.position.x = oldX;
 
     }
 
-    // Move Z
     camera.position.z += dz;
 
     if (
-        camera.position.y <
-        groundY + 1.8
+        blockAt(
+            camera.position.x,
+            camera.position.y - 0.5,
+            camera.position.z
+        )
     ) {
 
-        const checkY =
-            camera.position.y - 0.9;
-
-        if (
-            isSolidAt(
-                camera.position.x,
-                checkY,
-                camera.position.z
-            )
-        ) {
-
-            camera.position.z =
-                oldZ;
-
-        }
+        camera.position.z = oldZ;
 
     }
 
@@ -622,52 +485,52 @@ function movePlayer(dx, dz) {
 function updatePhysics() {
 
     const ground =
-        getGroundHeight();
+        groundHeight(
+            camera.position.x,
+            camera.position.z
+        );
 
-    const playerBottom =
+    const feet =
         camera.position.y -
-        player.height / 2;
+        PLAYER_HEIGHT / 2;
 
     // Falling
-    if (
-        playerBottom > ground
-    ) {
+    if (feet > ground) {
 
         velocityY -= gravity;
 
-        camera.position.y +=
-            velocityY;
+        camera.position.y += velocityY;
 
-        onGround = false;
+        grounded = false;
 
     }
 
-    // Land
+    // Landing
     if (
         camera.position.y -
-        player.height / 2 <= ground
+        PLAYER_HEIGHT / 2 <= ground
     ) {
 
         camera.position.y =
             ground +
-            player.height / 2;
+            PLAYER_HEIGHT / 2;
 
         velocityY = 0;
 
-        onGround = true;
+        grounded = true;
 
     }
 
     // Jump
     if (
         keys["Space"] &&
-        onGround
+        grounded
     ) {
 
         velocityY =
             jumpPower;
 
-        onGround = false;
+        grounded = false;
 
     }
 
@@ -682,26 +545,16 @@ const crosshair =
 
 crosshair.innerText = "+";
 
-crosshair.style.position =
-    "fixed";
-
-crosshair.style.left =
-    "50%";
-
-crosshair.style.top =
-    "50%";
+crosshair.style.position = "fixed";
+crosshair.style.left = "50%";
+crosshair.style.top = "50%";
 
 crosshair.style.transform =
     "translate(-50%, -50%)";
 
-crosshair.style.color =
-    "white";
-
-crosshair.style.fontSize =
-    "30px";
-
-crosshair.style.fontWeight =
-    "bold";
+crosshair.style.color = "white";
+crosshair.style.fontSize = "30px";
+crosshair.style.fontWeight = "bold";
 
 crosshair.style.textShadow =
     "2px 2px 2px black";
@@ -709,8 +562,7 @@ crosshair.style.textShadow =
 crosshair.style.pointerEvents =
     "none";
 
-crosshair.style.zIndex =
-    "10";
+crosshair.style.zIndex = "20";
 
 document.body.appendChild(
     crosshair
@@ -723,65 +575,55 @@ document.body.appendChild(
 const hotbar =
     document.createElement("div");
 
-hotbar.style.position =
-    "fixed";
-
-hotbar.style.bottom =
-    "20px";
-
-hotbar.style.left =
-    "50%";
+hotbar.style.position = "fixed";
+hotbar.style.bottom = "20px";
+hotbar.style.left = "50%";
 
 hotbar.style.transform =
     "translateX(-50%)";
 
-hotbar.style.display =
-    "flex";
+hotbar.style.display = "flex";
+hotbar.style.gap = "4px";
 
-hotbar.style.gap =
-    "4px";
+hotbar.style.padding = "6px";
 
 hotbar.style.background =
     "rgba(20,20,20,0.8)";
 
-hotbar.style.padding =
-    "6px";
-
-hotbar.style.zIndex =
-    "10";
+hotbar.style.zIndex = "20";
 
 document.body.appendChild(
     hotbar
 );
 
-const hotbarBlocks = [
+const hotbarData = [
 
     {
-        number: "1",
+        key: "1",
         material: grassMaterial,
         color: "#55aa33"
     },
 
     {
-        number: "2",
+        key: "2",
         material: dirtMaterial,
         color: "#8b5a2b"
     },
 
     {
-        number: "3",
+        key: "3",
         material: stoneMaterial,
         color: "#777777"
     },
 
     {
-        number: "4",
+        key: "4",
         material: woodMaterial,
         color: "#6b421f"
     },
 
     {
-        number: "5",
+        key: "5",
         material: leavesMaterial,
         color: "#2f8f35"
     }
@@ -790,30 +632,22 @@ const hotbarBlocks = [
 
 const hotbarSlots = [];
 
-for (
-    const item of hotbarBlocks
-) {
+for (const item of hotbarData) {
 
     const slot =
         document.createElement("div");
 
-    slot.style.width =
-        "60px";
+    slot.style.width = "60px";
+    slot.style.height = "60px";
 
-    slot.style.height =
-        "60px";
-
-    slot.style.background =
-        "#333";
+    slot.style.background = "#333";
 
     slot.style.border =
         "3px solid #777";
 
-    slot.style.position =
-        "relative";
+    slot.style.position = "relative";
 
-    slot.style.display =
-        "flex";
+    slot.style.display = "flex";
 
     slot.style.alignItems =
         "center";
@@ -824,11 +658,8 @@ for (
     const preview =
         document.createElement("div");
 
-    preview.style.width =
-        "38px";
-
-    preview.style.height =
-        "38px";
+    preview.style.width = "38px";
+    preview.style.height = "38px";
 
     preview.style.background =
         item.color;
@@ -836,34 +667,24 @@ for (
     preview.style.border =
         "2px solid #111";
 
-    slot.appendChild(
-        preview
-    );
+    slot.appendChild(preview);
 
     const number =
         document.createElement("div");
 
     number.innerText =
-        item.number;
+        item.key;
 
     number.style.position =
         "absolute";
 
-    number.style.bottom =
-        "2px";
+    number.style.left = "4px";
+    number.style.bottom = "2px";
 
-    number.style.left =
-        "4px";
+    number.style.color = "white";
+    number.style.fontWeight = "bold";
 
-    number.style.color =
-        "white";
-
-    number.style.fontWeight =
-        "bold";
-
-    slot.appendChild(
-        number
-    );
+    slot.appendChild(number);
 
     slot.onclick = () => {
 
@@ -874,13 +695,8 @@ for (
 
     };
 
-    hotbar.appendChild(
-        slot
-    );
-
-    hotbarSlots.push(
-        slot
-    );
+    hotbar.appendChild(slot);
+    hotbarSlots.push(slot);
 
 }
 
@@ -890,24 +706,17 @@ function updateHotbar() {
         (slot, index) => {
 
             if (
-                hotbarBlocks[index]
-                    .material ===
+                hotbarData[index].material ===
                 selectedMaterial
             ) {
 
                 slot.style.border =
                     "4px solid white";
 
-                slot.style.boxShadow =
-                    "0 0 10px white";
-
             } else {
 
                 slot.style.border =
                     "3px solid #777";
-
-                slot.style.boxShadow =
-                    "none";
 
             }
 
@@ -928,10 +737,85 @@ const raycaster =
 const center =
     new THREE.Vector2(0, 0);
 
-let highlightedBlock = null;
-let highlightBox = null;
+let highlight = null;
 
-function getTargetBlock() {
+function updateHighlight() {
+
+    raycaster.setFromCamera(
+        center,
+        camera
+    );
+
+    const hits =
+        raycaster.intersectObjects(
+            blocks,
+            false
+        );
+
+    if (
+        hits.length === 0 ||
+        hits[0].distance > 6
+    ) {
+
+        if (highlight) {
+
+            scene.remove(
+                highlight
+            );
+
+            highlight = null;
+
+        }
+
+        return;
+
+    }
+
+    const block =
+        hits[0].object;
+
+    if (!highlight) {
+
+        const geometry =
+            new THREE.BoxGeometry(
+                1.04,
+                1.04,
+                1.04
+            );
+
+        const edges =
+            new THREE.EdgesGeometry(
+                geometry
+            );
+
+        const material =
+            new THREE.LineBasicMaterial({
+                color: 0xffffff
+            });
+
+        highlight =
+            new THREE.LineSegments(
+                edges,
+                material
+            );
+
+        scene.add(
+            highlight
+        );
+
+    }
+
+    highlight.position.copy(
+        block.position
+    );
+
+}
+
+// =====================================================
+// BREAK / PLACE
+// =====================================================
+
+function getTarget() {
 
     raycaster.setFromCamera(
         center,
@@ -964,98 +848,16 @@ function getTargetBlock() {
 
 }
 
-function updateHighlight() {
-
-    const hit =
-        getTargetBlock();
-
-    if (!hit) {
-
-        if (highlightBox) {
-
-            scene.remove(
-                highlightBox
-            );
-
-        }
-
-        highlightedBlock =
-            null;
-
-        return;
-
-    }
-
-    const block =
-        hit.object;
-
-    if (
-        highlightedBlock !== block
-    ) {
-
-        if (highlightBox) {
-
-            scene.remove(
-                highlightBox
-            );
-
-        }
-
-        const geometry =
-            new THREE.BoxGeometry(
-                1.04,
-                1.04,
-                1.04
-            );
-
-        const edges =
-            new THREE.EdgesGeometry(
-                geometry
-            );
-
-        const material =
-            new THREE.LineBasicMaterial({
-                color: 0xffffff
-            });
-
-        highlightBox =
-            new THREE.LineSegments(
-                edges,
-                material
-            );
-
-        scene.add(
-            highlightBox
-        );
-
-        highlightedBlock =
-            block;
-
-    }
-
-    highlightBox.position.copy(
-        block.position
-    );
-
-}
-
-// =====================================================
-// BREAK BLOCK
-// =====================================================
-
 function breakBlock() {
 
-    const hit =
-        getTargetBlock();
+    const hit = getTarget();
 
     if (!hit) return;
 
     const block =
         hit.object;
 
-    scene.remove(
-        block
-    );
+    scene.remove(block);
 
     const index =
         blocks.indexOf(block);
@@ -1071,46 +873,29 @@ function breakBlock() {
 
 }
 
-// =====================================================
-// PLACE BLOCK
-// =====================================================
-
 function placeBlock() {
 
-    const hit =
-        getTargetBlock();
+    const hit = getTarget();
 
     if (!hit) return;
 
-    const block =
-        hit.object;
-
-    const normal =
-        hit.face.normal.clone();
-
     const position =
-        block.position.clone();
+        hit.object.position.clone();
 
     position.add(
-        normal
+        hit.face.normal
     );
 
     position.x =
-        Math.round(
-            position.x
-        );
+        Math.round(position.x);
 
     position.y =
-        Math.round(
-            position.y
-        );
+        Math.round(position.y);
 
     position.z =
-        Math.round(
-            position.z
-        );
+        Math.round(position.z);
 
-    // Don't put block inside player
+    // Don't place inside player
     if (
         Math.abs(
             position.x -
@@ -1130,20 +915,15 @@ function placeBlock() {
 
     }
 
-    // Don't duplicate blocks
-    for (
-        const existing of blocks
+    if (
+        blockAt(
+            position.x,
+            position.y,
+            position.z
+        )
     ) {
 
-        if (
-            existing.position.distanceTo(
-                position
-            ) < 0.1
-        ) {
-
-            return;
-
-        }
+        return;
 
     }
 
@@ -1166,17 +946,13 @@ renderer.domElement.addEventListener(
 
         if (!mouseLocked) return;
 
-        if (
-            event.button === 0
-        ) {
+        if (event.button === 0) {
 
             breakBlock();
 
         }
 
-        if (
-            event.button === 2
-        ) {
+        if (event.button === 2) {
 
             placeBlock();
 
@@ -1195,7 +971,7 @@ renderer.domElement.addEventListener(
 );
 
 // =====================================================
-// GAME LOOP
+// MAIN GAME LOOP
 // =====================================================
 
 function animate() {
@@ -1206,43 +982,35 @@ function animate() {
 
     const speed = 0.08;
 
-    let dx = 0;
-    let dz = 0;
+    let forward = 0;
+    let right = 0;
 
-    // Forward/back
     if (keys["KeyW"]) {
-        dz -= speed;
+        forward += speed;
     }
 
     if (keys["KeyS"]) {
-        dz += speed;
-    }
-
-    // Left/right
-    if (keys["KeyA"]) {
-        dx -= speed;
+        forward -= speed;
     }
 
     if (keys["KeyD"]) {
-        dx += speed;
+        right += speed;
     }
 
-    // Rotate movement based on camera
-    const sin =
-        Math.sin(yaw);
+    if (keys["KeyA"]) {
+        right -= speed;
+    }
 
-    const cos =
-        Math.cos(yaw);
-
+    // Movement relative to camera direction
     const moveX =
-        dx * cos -
-        dz * sin;
+        Math.sin(yaw) * forward +
+        Math.cos(yaw) * right;
 
     const moveZ =
-        dx * sin +
-        dz * cos;
+        Math.cos(yaw) * forward -
+        Math.sin(yaw) * right;
 
-    movePlayer(
+    tryMove(
         moveX,
         moveZ
     );
