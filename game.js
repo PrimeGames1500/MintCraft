@@ -55,11 +55,10 @@ scene.add(
 );
 
 // ============================================================
-// BLOCKS
+// BLOCK TYPES
 // ============================================================
 
 const BLOCKS = {
-
     grass: {
         material: new THREE.MeshLambertMaterial({
             color: 0x55aa33
@@ -190,7 +189,7 @@ function removeBlock(block) {
 }
 
 // ============================================================
-// RANDOM WORLD SEED
+// RANDOM SEED
 // ============================================================
 
 const seed =
@@ -383,7 +382,7 @@ function createTree(
         );
     }
 
-    // Lower canopy
+    // Lower leaves
     for (
         let dx = -2;
         dx <= 2;
@@ -413,7 +412,7 @@ function createTree(
         }
     }
 
-    // Upper canopy
+    // Upper leaves
     for (
         let dx = -1;
         dx <= 1;
@@ -441,7 +440,7 @@ function createTree(
         }
     }
 
-    // Top
+    // Top leaf
     addBlock(
         x,
         ground + 5,
@@ -505,11 +504,12 @@ const PLAYER_HEIGHT = 1.35;
 const EYE_HEIGHT = 1.20;
 
 const spawnGround =
-    terrainHeights.get("0,5") - 0.5;
+    terrainHeights.get("0,5");
 
 camera.position.set(
     0,
-    spawnGround * BLOCK_SIZE +
+    (spawnGround * BLOCK_SIZE) -
+        HALF_BLOCK +
         EYE_HEIGHT +
         0.02,
     5 * BLOCK_SIZE
@@ -830,31 +830,31 @@ function movePlayer() {
     forward /= length;
     right /= length;
 
-    const forwardVector =
+    const direction =
         new THREE.Vector3();
 
     camera.getWorldDirection(
-        forwardVector
+        direction
     );
 
-    forwardVector.y = 0;
+    direction.y = 0;
 
     if (
-        forwardVector.lengthSq() > 0
+        direction.lengthSq() > 0
     ) {
-        forwardVector.normalize();
+        direction.normalize();
     }
 
     const rightVector =
         new THREE.Vector3(
-            -forwardVector.z,
+            -direction.z,
             0,
-            forwardVector.x
+            direction.x
         );
 
     const dx =
         (
-            forwardVector.x *
+            direction.x *
             forward +
 
             rightVector.x *
@@ -863,7 +863,7 @@ function movePlayer() {
 
     const dz =
         (
-            forwardVector.z *
+            direction.z *
             forward +
 
             rightVector.z *
@@ -896,13 +896,10 @@ function movePlayer() {
 }
 
 // ============================================================
-// GROUND DETECTION
+// FIXED GROUND DETECTION
 // ============================================================
 
-function getGroundHeight(
-    x,
-    z
-) {
+function getGroundHeight(x, z) {
 
     const gx =
         Math.floor(
@@ -914,26 +911,55 @@ function getGroundHeight(
             z / BLOCK_SIZE
         );
 
-    const height =
-        terrainHeights.get(
-            `${gx},${gz}`
-        );
+    let highestGround =
+        -Infinity;
 
-    if (
-        height === undefined
+    for (
+        let dx = -1;
+        dx <= 1;
+        dx++
     ) {
-        return -4.5 * BLOCK_SIZE;
+
+        for (
+            let dz = -1;
+            dz <= 1;
+            dz++
+        ) {
+
+            const blockX =
+                gx + dx;
+
+            const blockZ =
+                gz + dz;
+
+            const height =
+                terrainHeights.get(
+                    `${blockX},${blockZ}`
+                );
+
+            if (
+                height === undefined
+            ) {
+                continue;
+            }
+
+            const top =
+                (height - 0.5) *
+                BLOCK_SIZE;
+
+            if (
+                top > highestGround
+            ) {
+                highestGround = top;
+            }
+        }
     }
 
-    // Top of the grass block
-    return (
-        height * BLOCK_SIZE -
-        HALF_BLOCK
-    );
+    return highestGround;
 }
 
 // ============================================================
-// PHYSICS + JUMP
+// FIXED GRAVITY + JUMP
 // ============================================================
 
 function updatePhysics() {
@@ -958,16 +984,17 @@ function updatePhysics() {
 
     velocityY -= GRAVITY;
 
-    const newY =
+    const nextY =
         camera.position.y +
         velocityY;
 
-    const newFeet =
-        newY -
+    const nextFeet =
+        nextY -
         EYE_HEIGHT;
 
     if (
-        newFeet <= ground &&
+        ground !== -Infinity &&
+        nextFeet <= ground &&
         velocityY <= 0
     ) {
 
@@ -981,7 +1008,7 @@ function updatePhysics() {
     } else {
 
         camera.position.y =
-            newY;
+            nextY;
 
         grounded = false;
     }
@@ -1117,7 +1144,6 @@ for (
 
     number.style.color = "white";
     number.style.fontWeight = "bold";
-    number.style.fontSize = "13px";
 
     slot.appendChild(number);
 
@@ -1207,7 +1233,7 @@ function getTargetBlock() {
 }
 
 // ============================================================
-// BLOCK HIGHLIGHT
+// HIGHLIGHT
 // ============================================================
 
 let highlight = null;
@@ -1315,9 +1341,14 @@ function placeBlock() {
             hit.face.normal.z
         );
 
-    const newX = x + nx;
-    const newY = y + ny;
-    const newZ = z + nz;
+    const newX =
+        x + nx;
+
+    const newY =
+        y + ny;
+
+    const newZ =
+        z + nz;
 
     if (
         getBlock(
@@ -1329,7 +1360,6 @@ function placeBlock() {
         return;
     }
 
-    // Prevent placing inside player
     const blockX =
         newX * BLOCK_SIZE;
 
@@ -1410,15 +1440,11 @@ renderer.domElement.addEventListener(
             return;
         }
 
-        if (
-            event.button === 0
-        ) {
+        if (event.button === 0) {
             breakBlock();
         }
 
-        if (
-            event.button === 2
-        ) {
+        if (event.button === 2) {
             placeBlock();
         }
     }
