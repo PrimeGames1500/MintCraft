@@ -35,7 +35,7 @@ document.body.style.overflow = "hidden";
 document.body.appendChild(renderer.domElement);
 
 // ============================================================
-// LIGHTING
+// LIGHT
 // ============================================================
 
 const sun = new THREE.DirectionalLight(
@@ -59,6 +59,7 @@ scene.add(
 // ============================================================
 
 const BLOCKS = {
+
     grass: {
         material: new THREE.MeshLambertMaterial({
             color: 0x55aa33
@@ -111,6 +112,7 @@ function blockKey(x, y, z) {
 }
 
 function getBlock(x, y, z) {
+
     return blockMap.get(
         blockKey(x, y, z)
     );
@@ -219,8 +221,7 @@ function random2D(x, z) {
 // TERRAIN
 // ============================================================
 
-const terrainHeights =
-    new Map();
+const terrainHeights = new Map();
 
 function terrainHeight(x, z) {
 
@@ -440,7 +441,7 @@ function createTree(
         }
     }
 
-    // Top leaf
+    // Top
     addBlock(
         x,
         ground + 5,
@@ -511,7 +512,7 @@ camera.position.set(
     (spawnGround * BLOCK_SIZE) -
         HALF_BLOCK +
         EYE_HEIGHT +
-        0.02,
+        0.05,
     5 * BLOCK_SIZE
 );
 
@@ -874,6 +875,7 @@ function movePlayer() {
         camera.position.y -
         EYE_HEIGHT;
 
+    // X collision
     if (
         !playerCollides(
             camera.position.x + dx,
@@ -881,9 +883,11 @@ function movePlayer() {
             camera.position.z
         )
     ) {
+
         camera.position.x += dx;
     }
 
+    // Z collision
     if (
         !playerCollides(
             camera.position.x,
@@ -891,84 +895,135 @@ function movePlayer() {
             camera.position.z + dz
         )
     ) {
+
         camera.position.z += dz;
     }
 }
 
 // ============================================================
-// FIXED GROUND DETECTION
+// MINECRAFT-STYLE GROUND CHECK
 // ============================================================
 
-function getGroundHeight(x, z) {
+function findGroundBelow() {
+
+    const playerX =
+        camera.position.x;
+
+    const playerZ =
+        camera.position.z;
+
+    const feetY =
+        camera.position.y -
+        EYE_HEIGHT;
 
     const gx =
         Math.floor(
-            x / BLOCK_SIZE
+            playerX / BLOCK_SIZE
         );
 
     const gz =
         Math.floor(
-            z / BLOCK_SIZE
+            playerZ / BLOCK_SIZE
         );
 
-    let highestGround =
+    let highestTop =
         -Infinity;
 
+    // Check blocks immediately around player
     for (
-        let dx = -1;
-        dx <= 1;
-        dx++
+        let x = gx - 1;
+        x <= gx + 1;
+        x++
     ) {
 
         for (
-            let dz = -1;
-            dz <= 1;
-            dz++
+            let z = gz - 1;
+            z <= gz + 1;
+            z++
         ) {
 
-            const blockX =
-                gx + dx;
+            // Make sure player overlaps this column
+            const blockCenterX =
+                x * BLOCK_SIZE;
 
-            const blockZ =
-                gz + dz;
+            const blockCenterZ =
+                z * BLOCK_SIZE;
 
-            const height =
-                terrainHeights.get(
-                    `${blockX},${blockZ}`
-                );
+            const horizontalX =
+                playerX +
+                    PLAYER_WIDTH / 2 >
+                    blockCenterX - HALF_BLOCK &&
+
+                playerX -
+                    PLAYER_WIDTH / 2 <
+                    blockCenterX + HALF_BLOCK;
+
+            const horizontalZ =
+                playerZ +
+                    PLAYER_DEPTH / 2 >
+                    blockCenterZ - HALF_BLOCK &&
+
+                playerZ -
+                    PLAYER_DEPTH / 2 <
+                    blockCenterZ + HALF_BLOCK;
 
             if (
-                height === undefined
+                !horizontalX ||
+                !horizontalZ
             ) {
                 continue;
             }
 
-            const top =
-                (height - 0.5) *
-                BLOCK_SIZE;
-
-            if (
-                top > highestGround
+            // Check all blocks vertically
+            for (
+                let y = -4;
+                y <= 40;
+                y++
             ) {
-                highestGround = top;
+
+                const block =
+                    getBlock(x, y, z);
+
+                if (!block) {
+                    continue;
+                }
+
+                const top =
+                    y * BLOCK_SIZE +
+                    HALF_BLOCK;
+
+                // Only blocks below player's feet
+                if (
+                    top <= feetY + 0.10 &&
+                    top > highestTop
+                ) {
+
+                    highestTop = top;
+                }
             }
         }
     }
 
-    return highestGround;
+    return highestTop;
 }
 
 // ============================================================
-// FIXED GRAVITY + JUMP
+// MINECRAFT GRAVITY + JUMPING
 // ============================================================
 
 function updatePhysics() {
 
     const ground =
-        getGroundHeight(
-            camera.position.x,
-            camera.position.z
-        );
+        findGroundBelow();
+
+    const feet =
+        camera.position.y -
+        EYE_HEIGHT;
+
+
+    // --------------------------------------------------------
+    // JUMP
+    // --------------------------------------------------------
 
     if (
         keys.space &&
@@ -979,10 +1034,27 @@ function updatePhysics() {
             JUMP_POWER;
 
         grounded = false;
+
         keys.space = false;
     }
 
+
+    // --------------------------------------------------------
+    // GRAVITY
+    // --------------------------------------------------------
+
     velocityY -= GRAVITY;
+
+    if (
+        velocityY < -0.35
+    ) {
+        velocityY = -0.35;
+    }
+
+
+    // --------------------------------------------------------
+    // NEXT POSITION
+    // --------------------------------------------------------
 
     const nextY =
         camera.position.y +
@@ -991,6 +1063,11 @@ function updatePhysics() {
     const nextFeet =
         nextY -
         EYE_HEIGHT;
+
+
+    // --------------------------------------------------------
+    // LAND ON BLOCK
+    // --------------------------------------------------------
 
     if (
         ground !== -Infinity &&
@@ -1003,6 +1080,7 @@ function updatePhysics() {
             EYE_HEIGHT;
 
         velocityY = 0;
+
         grounded = true;
 
     } else {
@@ -1233,7 +1311,7 @@ function getTargetBlock() {
 }
 
 // ============================================================
-// HIGHLIGHT
+// BLOCK HIGHLIGHT
 // ============================================================
 
 let highlight = null;
@@ -1360,6 +1438,7 @@ function placeBlock() {
         return;
     }
 
+    // Don't place a block inside player
     const blockX =
         newX * BLOCK_SIZE;
 
@@ -1440,11 +1519,15 @@ renderer.domElement.addEventListener(
             return;
         }
 
-        if (event.button === 0) {
+        if (
+            event.button === 0
+        ) {
             breakBlock();
         }
 
-        if (event.button === 2) {
+        if (
+            event.button === 2
+        ) {
             placeBlock();
         }
     }
