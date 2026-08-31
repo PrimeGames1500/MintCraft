@@ -25,23 +25,23 @@ document.body.innerHTML = "";
 document.body.appendChild(renderer.domElement);
 
 // =====================================================
-// LIGHT
+// LIGHTING
 // =====================================================
 
 const sun = new THREE.DirectionalLight(0xffffff, 2);
-sun.position.set(20, 30, 10);
+sun.position.set(30, 40, 20);
 scene.add(sun);
 
-scene.add(
-    new THREE.HemisphereLight(
-        0xffffff,
-        0x555555,
-        1.5
-    )
+const ambient = new THREE.HemisphereLight(
+    0xffffff,
+    0x555555,
+    1.5
 );
 
+scene.add(ambient);
+
 // =====================================================
-// BLOCK TYPES
+// MATERIALS
 // =====================================================
 
 const grassMaterial = new THREE.MeshLambertMaterial({
@@ -67,10 +67,15 @@ const leavesMaterial = new THREE.MeshLambertMaterial({
 let selectedMaterial = grassMaterial;
 
 // =====================================================
-// BLOCKS
+// BLOCK DATA
 // =====================================================
 
 const blocks = [];
+const blockMap = new Map();
+
+function blockKey(x, y, z) {
+    return `${x},${y},${z}`;
+}
 
 function createBlock(x, y, z, material) {
 
@@ -83,32 +88,61 @@ function createBlock(x, y, z, material) {
 
     block.position.set(x, y, z);
 
+    block.userData.x = x;
+    block.userData.y = y;
+    block.userData.z = z;
+
     scene.add(block);
     blocks.push(block);
+
+    blockMap.set(
+        blockKey(x, y, z),
+        block
+    );
 
     return block;
 }
 
+function getBlock(x, y, z) {
+
+    return blockMap.get(
+        blockKey(
+            Math.floor(x),
+            Math.floor(y),
+            Math.floor(z)
+        )
+    );
+}
+
+function removeBlock(block) {
+
+    scene.remove(block);
+
+    const index = blocks.indexOf(block);
+
+    if (index !== -1) {
+        blocks.splice(index, 1);
+    }
+
+    blockMap.delete(
+        blockKey(
+            block.userData.x,
+            block.userData.y,
+            block.userData.z
+        )
+    );
+
+    block.geometry.dispose();
+}
+
 // =====================================================
-// RANDOM SEED
+// RANDOM WORLD SEED
 // =====================================================
 
-const seed = Math.floor(
-    Math.random() * 1000000000
-);
+const seed =
+    Math.floor(Math.random() * 1000000000);
 
 console.log("MintCraft Seed:", seed);
-
-function randomNoise(x, z) {
-
-    const value = Math.sin(
-        x * 127.1 +
-        z * 311.7 +
-        seed
-    ) * 43758.5453;
-
-    return value - Math.floor(value);
-}
 
 // =====================================================
 // TERRAIN
@@ -116,59 +150,76 @@ function randomNoise(x, z) {
 
 function getHeight(x, z) {
 
-    const hills =
-        Math.sin((x + seed) * 0.12) * 3;
+    const a =
+        Math.sin(
+            (x + seed * 0.00001) * 0.12
+        ) * 3;
 
-    const valleys =
-        Math.cos((z - seed) * 0.11) * 3;
+    const b =
+        Math.cos(
+            (z - seed * 0.00001) * 0.11
+        ) * 3;
 
-    const smaller =
-        Math.sin((x + z) * 0.2) * 1.5;
-
-    let height =
-        5 +
-        hills +
-        valleys +
-        smaller;
+    const c =
+        Math.sin(
+            (x + z + seed * 0.00002) * 0.18
+        ) * 1.5;
 
     return Math.max(
         1,
-        Math.min(10, Math.round(height))
+        Math.min(
+            10,
+            Math.round(5 + a + b + c)
+        )
     );
+}
+
+function seededRandom(x, z) {
+
+    const value =
+        Math.sin(
+            x * 127.1 +
+            z * 311.7 +
+            seed
+        ) * 43758.5453;
+
+    return value - Math.floor(value);
 }
 
 // =====================================================
 // TREES
 // =====================================================
 
-function createTree(x, y, z) {
+function createTree(x, groundHeight, z) {
 
-    for (let i = 0; i < 4; i++) {
+    // Trunk
+    for (let y = 0; y < 4; y++) {
 
         createBlock(
             x,
-            y + i,
+            groundHeight + y,
             z,
             woodMaterial
         );
 
     }
 
-    for (let lx = -2; lx <= 2; lx++) {
+    // Leaves
+    for (let x2 = -2; x2 <= 2; x2++) {
 
-        for (let lz = -2; lz <= 2; lz++) {
+        for (let z2 = -2; z2 <= 2; z2++) {
 
-            for (let ly = 2; ly <= 4; ly++) {
+            for (let y2 = 2; y2 <= 4; y2++) {
 
                 if (
-                    Math.abs(lx) +
-                    Math.abs(lz) <= 3
+                    Math.abs(x2) +
+                    Math.abs(z2) <= 3
                 ) {
 
                     createBlock(
-                        x + lx,
-                        y + ly,
-                        z + lz,
+                        x + x2,
+                        groundHeight + y2,
+                        z + z2,
                         leavesMaterial
                     );
 
@@ -182,50 +233,34 @@ function createTree(x, y, z) {
 
     createBlock(
         x,
-        y + 5,
+        groundHeight + 5,
         z,
         leavesMaterial
     );
 }
 
 // =====================================================
-// WORLD GENERATION
+// GENERATE WORLD
 // =====================================================
 
 const WORLD_SIZE = 25;
 
-for (
-    let x = -WORLD_SIZE;
-    x <= WORLD_SIZE;
-    x++
-) {
+for (let x = -WORLD_SIZE; x <= WORLD_SIZE; x++) {
 
-    for (
-        let z = -WORLD_SIZE;
-        z <= WORLD_SIZE;
-        z++
-    ) {
+    for (let z = -WORLD_SIZE; z <= WORLD_SIZE; z++) {
 
         const height =
             getHeight(x, z);
 
-        for (
-            let y = -4;
-            y < height;
-            y++
-        ) {
+        for (let y = -4; y < height; y++) {
 
             let material;
 
-            if (
-                y === height - 1
-            ) {
+            if (y === height - 1) {
 
                 material = grassMaterial;
 
-            } else if (
-                y >= height - 4
-            ) {
+            } else if (y >= height - 4) {
 
                 material = dirtMaterial;
 
@@ -241,11 +276,10 @@ for (
                 z,
                 material
             );
-
         }
 
         if (
-            randomNoise(x, z) > 0.97 &&
+            seededRandom(x, z) > 0.97 &&
             height >= 3 &&
             Math.abs(x) > 3 &&
             Math.abs(z) > 3
@@ -256,27 +290,32 @@ for (
                 height,
                 z
             );
-
         }
-
     }
-
 }
 
 // =====================================================
 // PLAYER
 // =====================================================
 
+const PLAYER_WIDTH = 0.6;
 const PLAYER_HEIGHT = 1.8;
-const PLAYER_RADIUS = 0.3;
+const PLAYER_DEPTH = 0.6;
+
+const EYE_HEIGHT = 1.62;
 
 camera.position.set(
     0,
-    getHeight(0, 5) + 3,
+    getHeight(0, 5) + EYE_HEIGHT,
     5
 );
 
+// =====================================================
+// PLAYER PHYSICS
+// =====================================================
+
 let velocityY = 0;
+
 let grounded = false;
 
 const gravity = 0.015;
@@ -294,38 +333,68 @@ document.addEventListener(
 
         keys[event.code] = true;
 
+        // Prevent browser scrolling with space
+        if (
+            event.code === "Space" ||
+            event.code === "ArrowUp" ||
+            event.code === "ArrowDown"
+        ) {
+            event.preventDefault();
+        }
+
         if (event.code === "Digit1") {
-            selectedMaterial = grassMaterial;
+
+            selectedMaterial =
+                grassMaterial;
+
             updateHotbar();
+
         }
 
         if (event.code === "Digit2") {
-            selectedMaterial = dirtMaterial;
+
+            selectedMaterial =
+                dirtMaterial;
+
             updateHotbar();
+
         }
 
         if (event.code === "Digit3") {
-            selectedMaterial = stoneMaterial;
+
+            selectedMaterial =
+                stoneMaterial;
+
             updateHotbar();
+
         }
 
         if (event.code === "Digit4") {
-            selectedMaterial = woodMaterial;
+
+            selectedMaterial =
+                woodMaterial;
+
             updateHotbar();
+
         }
 
         if (event.code === "Digit5") {
-            selectedMaterial = leavesMaterial;
-            updateHotbar();
-        }
 
+            selectedMaterial =
+                leavesMaterial;
+
+            updateHotbar();
+
+        }
     }
 );
 
 document.addEventListener(
     "keyup",
     event => {
+
         keys[event.code] = false;
+
     }
 );
 
@@ -334,6 +403,7 @@ document.addEventListener(
 // =====================================================
 
 let mouseLocked = false;
+
 let yaw = 0;
 let pitch = 0;
 
@@ -374,8 +444,11 @@ document.addEventListener(
             sensitivity;
 
         pitch = Math.max(
-            -Math.PI / 2,
-            Math.min(Math.PI / 2, pitch)
+            -Math.PI / 2 + 0.01,
+            Math.min(
+                Math.PI / 2 - 0.01,
+                pitch
+            )
         );
 
         camera.rotation.order = "YXZ";
@@ -387,53 +460,158 @@ document.addEventListener(
 );
 
 // =====================================================
-// COLLISION HELPERS
+// PLAYER COLLISION
 // =====================================================
 
-function blockAt(x, y, z) {
+function playerTouchesBlock(
+    x,
+    y,
+    z
+) {
 
-    const bx = Math.floor(x);
-    const by = Math.floor(y);
-    const bz = Math.floor(z);
+    const halfWidth =
+        PLAYER_WIDTH / 2;
 
-    for (const block of blocks) {
+    const halfDepth =
+        PLAYER_DEPTH / 2;
 
-        if (
-            Math.round(block.position.x) === bx &&
-            Math.round(block.position.y) === by &&
-            Math.round(block.position.z) === bz
+    const minX =
+        Math.floor(
+            x - halfWidth
+        );
+
+    const maxX =
+        Math.floor(
+            x + halfWidth
+        );
+
+    const minY =
+        Math.floor(
+            y
+        );
+
+    const maxY =
+        Math.floor(
+            y + PLAYER_HEIGHT
+        );
+
+    const minZ =
+        Math.floor(
+            z - halfDepth
+        );
+
+    const maxZ =
+        Math.floor(
+            z + halfDepth
+        );
+
+    for (
+        let bx = minX;
+        bx <= maxX;
+        bx++
+    ) {
+
+        for (
+            let by = minY;
+            by <= maxY;
+            by++
         ) {
 
-            return block;
+            for (
+                let bz = minZ;
+                bz <= maxZ;
+                bz++
+            ) {
 
+                if (
+                    getBlock(
+                        bx,
+                        by,
+                        bz
+                    )
+                ) {
+
+                    return true;
+
+                }
+            }
         }
-
     }
 
-    return null;
+    return false;
 }
 
-function groundHeight(x, z) {
+// =====================================================
+// FIND GROUND
+// =====================================================
 
-    const bx = Math.floor(x);
-    const bz = Math.floor(z);
+function findGround(x, z) {
 
-    let highest = -100;
+    const halfWidth =
+        PLAYER_WIDTH / 2;
 
-    for (const block of blocks) {
+    const halfDepth =
+        PLAYER_DEPTH / 2;
 
-        if (
-            Math.round(block.position.x) === bx &&
-            Math.round(block.position.z) === bz
+    const minX =
+        Math.floor(
+            x - halfWidth
+        );
+
+    const maxX =
+        Math.floor(
+            x + halfWidth
+        );
+
+    const minZ =
+        Math.floor(
+            z - halfDepth
+        );
+
+    const maxZ =
+        Math.floor(
+            z + halfDepth
+        );
+
+    let highest =
+        -100;
+
+    for (
+        let bx = minX;
+        bx <= maxX;
+        bx++
+    ) {
+
+        for (
+            let bz = minZ;
+            bz <= maxZ;
+            bz++
         ) {
 
-            highest = Math.max(
-                highest,
-                block.position.y + 0.5
-            );
+            for (
+                let by = 15;
+                by >= -5;
+                by--
+            ) {
 
+                if (
+                    getBlock(
+                        bx,
+                        by,
+                        bz
+                    )
+                ) {
+
+                    highest =
+                        Math.max(
+                            highest,
+                            by + 0.5
+                        );
+
+                    break;
+                }
+            }
         }
-
     }
 
     return highest;
@@ -443,39 +621,44 @@ function groundHeight(x, z) {
 // MOVEMENT
 // =====================================================
 
-function tryMove(dx, dz) {
+function movePlayer(dx, dz) {
 
-    const oldX = camera.position.x;
-    const oldZ = camera.position.z;
+    // Move X
+    const newX =
+        camera.position.x + dx;
 
-    camera.position.x += dx;
+    const feet =
+        camera.position.y - EYE_HEIGHT;
 
     if (
-        blockAt(
-            camera.position.x,
-            camera.position.y - 0.5,
+        !playerTouchesBlock(
+            newX,
+            feet,
             camera.position.z
         )
     ) {
 
-        camera.position.x = oldX;
+        camera.position.x =
+            newX;
 
     }
 
-    camera.position.z += dz;
+    // Move Z
+    const newZ =
+        camera.position.z + dz;
 
     if (
-        blockAt(
+        !playerTouchesBlock(
             camera.position.x,
-            camera.position.y - 0.5,
-            camera.position.z
+            feet,
+            newZ
         )
     ) {
 
-        camera.position.z = oldZ;
+        camera.position.z =
+            newZ;
 
     }
-
 }
 
 // =====================================================
@@ -484,22 +667,25 @@ function tryMove(dx, dz) {
 
 function updatePhysics() {
 
+    const feet =
+        camera.position.y -
+        EYE_HEIGHT;
+
     const ground =
-        groundHeight(
+        findGround(
             camera.position.x,
             camera.position.z
         );
 
-    const feet =
-        camera.position.y -
-        PLAYER_HEIGHT / 2;
-
-    // Falling
-    if (feet > ground) {
+    // Gravity
+    if (
+        feet > ground + 0.02
+    ) {
 
         velocityY -= gravity;
 
-        camera.position.y += velocityY;
+        camera.position.y +=
+            velocityY;
 
         grounded = false;
 
@@ -507,13 +693,12 @@ function updatePhysics() {
 
     // Landing
     if (
-        camera.position.y -
-        PLAYER_HEIGHT / 2 <= ground
+        feet <= ground &&
+        velocityY <= 0
     ) {
 
         camera.position.y =
-            ground +
-            PLAYER_HEIGHT / 2;
+            ground + EYE_HEIGHT;
 
         velocityY = 0;
 
@@ -532,8 +717,8 @@ function updatePhysics() {
 
         grounded = false;
 
+        keys["Space"] = false;
     }
-
 }
 
 // =====================================================
@@ -545,16 +730,26 @@ const crosshair =
 
 crosshair.innerText = "+";
 
-crosshair.style.position = "fixed";
-crosshair.style.left = "50%";
-crosshair.style.top = "50%";
+crosshair.style.position =
+    "fixed";
+
+crosshair.style.left =
+    "50%";
+
+crosshair.style.top =
+    "50%";
 
 crosshair.style.transform =
     "translate(-50%, -50%)";
 
-crosshair.style.color = "white";
-crosshair.style.fontSize = "30px";
-crosshair.style.fontWeight = "bold";
+crosshair.style.color =
+    "white";
+
+crosshair.style.fontSize =
+    "30px";
+
+crosshair.style.fontWeight =
+    "bold";
 
 crosshair.style.textShadow =
     "2px 2px 2px black";
@@ -562,7 +757,8 @@ crosshair.style.textShadow =
 crosshair.style.pointerEvents =
     "none";
 
-crosshair.style.zIndex = "20";
+crosshair.style.zIndex =
+    "100";
 
 document.body.appendChild(
     crosshair
@@ -575,22 +771,32 @@ document.body.appendChild(
 const hotbar =
     document.createElement("div");
 
-hotbar.style.position = "fixed";
-hotbar.style.bottom = "20px";
-hotbar.style.left = "50%";
+hotbar.style.position =
+    "fixed";
+
+hotbar.style.bottom =
+    "20px";
+
+hotbar.style.left =
+    "50%";
 
 hotbar.style.transform =
     "translateX(-50%)";
 
-hotbar.style.display = "flex";
-hotbar.style.gap = "4px";
+hotbar.style.display =
+    "flex";
 
-hotbar.style.padding = "6px";
+hotbar.style.gap =
+    "4px";
+
+hotbar.style.padding =
+    "6px";
 
 hotbar.style.background =
     "rgba(20,20,20,0.8)";
 
-hotbar.style.zIndex = "20";
+hotbar.style.zIndex =
+    "100";
 
 document.body.appendChild(
     hotbar
@@ -632,22 +838,30 @@ const hotbarData = [
 
 const hotbarSlots = [];
 
-for (const item of hotbarData) {
+for (
+    const item of hotbarData
+) {
 
     const slot =
         document.createElement("div");
 
-    slot.style.width = "60px";
-    slot.style.height = "60px";
+    slot.style.width =
+        "60px";
 
-    slot.style.background = "#333";
+    slot.style.height =
+        "60px";
+
+    slot.style.background =
+        "#333";
 
     slot.style.border =
         "3px solid #777";
 
-    slot.style.position = "relative";
+    slot.style.position =
+        "relative";
 
-    slot.style.display = "flex";
+    slot.style.display =
+        "flex";
 
     slot.style.alignItems =
         "center";
@@ -658,8 +872,11 @@ for (const item of hotbarData) {
     const preview =
         document.createElement("div");
 
-    preview.style.width = "38px";
-    preview.style.height = "38px";
+    preview.style.width =
+        "38px";
+
+    preview.style.height =
+        "38px";
 
     preview.style.background =
         item.color;
@@ -667,7 +884,9 @@ for (const item of hotbarData) {
     preview.style.border =
         "2px solid #111";
 
-    slot.appendChild(preview);
+    slot.appendChild(
+        preview
+    );
 
     const number =
         document.createElement("div");
@@ -678,13 +897,21 @@ for (const item of hotbarData) {
     number.style.position =
         "absolute";
 
-    number.style.left = "4px";
-    number.style.bottom = "2px";
+    number.style.left =
+        "4px";
 
-    number.style.color = "white";
-    number.style.fontWeight = "bold";
+    number.style.bottom =
+        "2px";
 
-    slot.appendChild(number);
+    number.style.color =
+        "white";
+
+    number.style.fontWeight =
+        "bold";
+
+    slot.appendChild(
+        number
+    );
 
     slot.onclick = () => {
 
@@ -695,9 +922,13 @@ for (const item of hotbarData) {
 
     };
 
-    hotbar.appendChild(slot);
-    hotbarSlots.push(slot);
+    hotbar.appendChild(
+        slot
+    );
 
+    hotbarSlots.push(
+        slot
+    );
 }
 
 function updateHotbar() {
@@ -706,29 +937,34 @@ function updateHotbar() {
         (slot, index) => {
 
             if (
-                hotbarData[index].material ===
+                hotbarData[index]
+                    .material ===
                 selectedMaterial
             ) {
 
                 slot.style.border =
                     "4px solid white";
 
+                slot.style.boxShadow =
+                    "0 0 10px white";
+
             } else {
 
                 slot.style.border =
                     "3px solid #777";
 
-            }
+                slot.style.boxShadow =
+                    "none";
 
+            }
         }
     );
-
 }
 
 updateHotbar();
 
 // =====================================================
-// BLOCK HIGHLIGHT
+// RAYCASTING
 // =====================================================
 
 const raycaster =
@@ -737,85 +973,7 @@ const raycaster =
 const center =
     new THREE.Vector2(0, 0);
 
-let highlight = null;
-
-function updateHighlight() {
-
-    raycaster.setFromCamera(
-        center,
-        camera
-    );
-
-    const hits =
-        raycaster.intersectObjects(
-            blocks,
-            false
-        );
-
-    if (
-        hits.length === 0 ||
-        hits[0].distance > 6
-    ) {
-
-        if (highlight) {
-
-            scene.remove(
-                highlight
-            );
-
-            highlight = null;
-
-        }
-
-        return;
-
-    }
-
-    const block =
-        hits[0].object;
-
-    if (!highlight) {
-
-        const geometry =
-            new THREE.BoxGeometry(
-                1.04,
-                1.04,
-                1.04
-            );
-
-        const edges =
-            new THREE.EdgesGeometry(
-                geometry
-            );
-
-        const material =
-            new THREE.LineBasicMaterial({
-                color: 0xffffff
-            });
-
-        highlight =
-            new THREE.LineSegments(
-                edges,
-                material
-            );
-
-        scene.add(
-            highlight
-        );
-
-    }
-
-    highlight.position.copy(
-        block.position
-    );
-
-}
-
-// =====================================================
-// BREAK / PLACE
-// =====================================================
-
-function getTarget() {
+function getTargetBlock() {
 
     raycaster.setFromCamera(
         center,
@@ -845,37 +1003,93 @@ function getTarget() {
     }
 
     return hits[0];
-
 }
+
+// =====================================================
+// BLOCK HIGHLIGHT
+// =====================================================
+
+let highlight = null;
+
+function updateHighlight() {
+
+    const hit =
+        getTargetBlock();
+
+    if (!hit) {
+
+        if (highlight) {
+
+            scene.remove(
+                highlight
+            );
+
+            highlight = null;
+
+        }
+
+        return;
+    }
+
+    if (!highlight) {
+
+        const geometry =
+            new THREE.BoxGeometry(
+                1.04,
+                1.04,
+                1.04
+            );
+
+        const edges =
+            new THREE.EdgesGeometry(
+                geometry
+            );
+
+        const material =
+            new THREE.LineBasicMaterial({
+                color: 0xffffff
+            });
+
+        highlight =
+            new THREE.LineSegments(
+                edges,
+                material
+            );
+
+        scene.add(
+            highlight
+        );
+    }
+
+    highlight.position.copy(
+        hit.object.position
+    );
+}
+
+// =====================================================
+// BREAK BLOCK
+// =====================================================
 
 function breakBlock() {
 
-    const hit = getTarget();
+    const hit =
+        getTargetBlock();
 
     if (!hit) return;
 
-    const block =
-        hit.object;
-
-    scene.remove(block);
-
-    const index =
-        blocks.indexOf(block);
-
-    if (index !== -1) {
-
-        blocks.splice(
-            index,
-            1
-        );
-
-    }
-
+    removeBlock(
+        hit.object
+    );
 }
+
+// =====================================================
+// PLACE BLOCK
+// =====================================================
 
 function placeBlock() {
 
-    const hit = getTarget();
+    const hit =
+        getTargetBlock();
 
     if (!hit) return;
 
@@ -895,20 +1109,33 @@ function placeBlock() {
     position.z =
         Math.round(position.z);
 
-    // Don't place inside player
+    // Don't place where the player is
+    const playerFeet =
+        camera.position.y -
+        EYE_HEIGHT;
+
     if (
-        Math.abs(
-            position.x -
-            camera.position.x
-        ) < 0.8 &&
-        Math.abs(
-            position.z -
-            camera.position.z
-        ) < 0.8 &&
-        Math.abs(
-            position.y -
+        position.x + 0.5 >
+            camera.position.x -
+            PLAYER_WIDTH / 2 &&
+
+        position.x - 0.5 <
+            camera.position.x +
+            PLAYER_WIDTH / 2 &&
+
+        position.z + 0.5 >
+            camera.position.z -
+            PLAYER_DEPTH / 2 &&
+
+        position.z - 0.5 <
+            camera.position.z +
+            PLAYER_DEPTH / 2 &&
+
+        position.y + 0.5 >
+            playerFeet &&
+
+        position.y - 0.5 <
             camera.position.y
-        ) < 1.8
     ) {
 
         return;
@@ -916,7 +1143,7 @@ function placeBlock() {
     }
 
     if (
-        blockAt(
+        getBlock(
             position.x,
             position.y,
             position.z
@@ -933,7 +1160,6 @@ function placeBlock() {
         position.z,
         selectedMaterial
     );
-
 }
 
 // =====================================================
@@ -946,18 +1172,21 @@ renderer.domElement.addEventListener(
 
         if (!mouseLocked) return;
 
-        if (event.button === 0) {
+        if (
+            event.button === 0
+        ) {
 
             breakBlock();
 
         }
 
-        if (event.button === 2) {
+        if (
+            event.button === 2
+        ) {
 
             placeBlock();
 
         }
-
     }
 );
 
@@ -971,7 +1200,7 @@ renderer.domElement.addEventListener(
 );
 
 // =====================================================
-// MAIN GAME LOOP
+// GAME LOOP
 // =====================================================
 
 function animate() {
@@ -980,7 +1209,11 @@ function animate() {
         animate
     );
 
-    const speed = 0.08;
+    const speed =
+        keys["ShiftLeft"] ||
+        keys["ShiftRight"]
+            ? 0.13
+            : 0.08;
 
     let forward = 0;
     let right = 0;
@@ -1001,7 +1234,24 @@ function animate() {
         right -= speed;
     }
 
-    // Movement relative to camera direction
+    // Normalize diagonal movement
+    const length =
+        Math.sqrt(
+            forward * forward +
+            right * right
+        );
+
+    if (length > speed) {
+
+        forward =
+            forward / length * speed;
+
+        right =
+            right / length * speed;
+
+    }
+
+    // Camera-relative movement
     const moveX =
         Math.sin(yaw) * forward +
         Math.cos(yaw) * right;
@@ -1010,7 +1260,7 @@ function animate() {
         Math.cos(yaw) * forward -
         Math.sin(yaw) * right;
 
-    tryMove(
+    movePlayer(
         moveX,
         moveZ
     );
@@ -1023,7 +1273,6 @@ function animate() {
         scene,
         camera
     );
-
 }
 
 animate();
@@ -1046,6 +1295,5 @@ window.addEventListener(
             window.innerWidth,
             window.innerHeight
         );
-
     }
 );
