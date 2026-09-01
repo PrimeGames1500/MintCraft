@@ -38,11 +38,7 @@ document.body.appendChild(renderer.domElement);
 // LIGHTING
 // ============================================================
 
-const sun = new THREE.DirectionalLight(
-    0xffffff,
-    2
-);
-
+const sun = new THREE.DirectionalLight(0xffffff, 2);
 sun.position.set(30, 50, 20);
 scene.add(sun);
 
@@ -58,116 +54,130 @@ scene.add(
 // TEXTURES
 // ============================================================
 
-const textureLoader =
-    new THREE.TextureLoader();
+const textureLoader = new THREE.TextureLoader();
+
+function loadTexture(path) {
+    const texture = textureLoader.load(path);
+
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+
+    texture.colorSpace = THREE.SRGBColorSpace;
+
+    return texture;
+}
 
 const grassTopTexture =
-    textureLoader.load(
-        "./textures/grass_top.png"
-    );
+    loadTexture("./textures/grass_top.png");
 
 const grassSideTexture =
-    textureLoader.load(
-        "./textures/grass_side.png"
-    );
+    loadTexture("./textures/grass_side.png");
 
-// Keep pixel-art textures sharp
-grassTopTexture.magFilter =
-    THREE.NearestFilter;
+const dirtTexture =
+    loadTexture("./textures/dirt.png");
 
-grassTopTexture.minFilter =
-    THREE.NearestFilter;
+const stoneTexture =
+    loadTexture("./textures/stone.png");
 
-grassSideTexture.magFilter =
-    THREE.NearestFilter;
+const woodSideTexture =
+    loadTexture("./textures/wood_side.png");
 
-grassSideTexture.minFilter =
-    THREE.NearestFilter;
+const woodTopTexture =
+    loadTexture("./textures/wood_top.png");
 
-// Correct colors for textures
-grassTopTexture.colorSpace =
-    THREE.SRGBColorSpace;
+const leavesTexture =
+    loadTexture("./textures/leaves.png");
 
-grassSideTexture.colorSpace =
-    THREE.SRGBColorSpace;
+// ============================================================
+// MATERIAL HELPER
+// ============================================================
+
+function texturedMaterial(texture) {
+    return new THREE.MeshLambertMaterial({
+        map: texture
+    });
+}
 
 // ============================================================
 // BLOCK MATERIALS
 // ============================================================
 
-// Grass uses:
-// 0 = right
-// 1 = left
-// 2 = top
-// 3 = bottom
-// 4 = front
-// 5 = back
-
+// Grass:
+// right, left, top, bottom, front, back
 const grassMaterial = [
+    texturedMaterial(grassSideTexture),
+    texturedMaterial(grassSideTexture),
+    texturedMaterial(grassTopTexture),
+    texturedMaterial(grassSideTexture),
+    texturedMaterial(grassSideTexture),
+    texturedMaterial(grassSideTexture)
+];
 
-    new THREE.MeshLambertMaterial({
-        map: grassSideTexture
-    }),
+// Dirt
+const dirtMaterial = [
+    texturedMaterial(dirtTexture),
+    texturedMaterial(dirtTexture),
+    texturedMaterial(dirtTexture),
+    texturedMaterial(dirtTexture),
+    texturedMaterial(dirtTexture),
+    texturedMaterial(dirtTexture)
+];
 
-    new THREE.MeshLambertMaterial({
-        map: grassSideTexture
-    }),
+// Stone
+const stoneMaterial = [
+    texturedMaterial(stoneTexture),
+    texturedMaterial(stoneTexture),
+    texturedMaterial(stoneTexture),
+    texturedMaterial(stoneTexture),
+    texturedMaterial(stoneTexture),
+    texturedMaterial(stoneTexture)
+];
 
-    new THREE.MeshLambertMaterial({
-        map: grassTopTexture
-    }),
+// Wood:
+// top and bottom use wood_top
+// sides use wood_side
+const woodMaterial = [
+    texturedMaterial(woodSideTexture),
+    texturedMaterial(woodSideTexture),
+    texturedMaterial(woodTopTexture),
+    texturedMaterial(woodTopTexture),
+    texturedMaterial(woodSideTexture),
+    texturedMaterial(woodSideTexture)
+];
 
-    new THREE.MeshLambertMaterial({
-        map: grassSideTexture
-    }),
-
-    new THREE.MeshLambertMaterial({
-        map: grassSideTexture
-    }),
-
-    new THREE.MeshLambertMaterial({
-        map: grassSideTexture
-    })
+// Leaves
+const leavesMaterial = [
+    texturedMaterial(leavesTexture),
+    texturedMaterial(leavesTexture),
+    texturedMaterial(leavesTexture),
+    texturedMaterial(leavesTexture),
+    texturedMaterial(leavesTexture),
+    texturedMaterial(leavesTexture)
 ];
 
 const BLOCKS = {
-
     grass: {
         material: grassMaterial,
         color: "#55aa33"
     },
 
     dirt: {
-        material:
-            new THREE.MeshLambertMaterial({
-                color: 0x8b5a2b
-            }),
+        material: dirtMaterial,
         color: "#8b5a2b"
     },
 
     stone: {
-        material:
-            new THREE.MeshLambertMaterial({
-                color: 0x777777
-            }),
+        material: stoneMaterial,
         color: "#777777"
     },
 
     wood: {
-        material:
-            new THREE.MeshLambertMaterial({
-                color: 0x6b421f
-            }),
+        material: woodMaterial,
         color: "#6b421f"
     },
 
     leaves: {
-        material:
-            new THREE.MeshLambertMaterial({
-                color: 0x2f8f35,
-                transparent: true,
-                opacity: 0.9
-            }),
+        material: leavesMaterial,
         color: "#2f8f35"
     }
 };
@@ -186,7 +196,6 @@ function blockKey(x, y, z) {
 }
 
 function getBlock(x, y, z) {
-
     return blockMap.get(
         blockKey(x, y, z)
     );
@@ -199,7 +208,6 @@ function addBlock(
     type,
     category = "placed"
 ) {
-
     x = Math.round(x);
     y = Math.round(y);
     z = Math.round(z);
@@ -241,13 +249,11 @@ function addBlock(
 }
 
 function removeBlock(block) {
-
     if (!block) return;
 
     scene.remove(block);
 
-    const index =
-        blocks.indexOf(block);
+    const index = blocks.indexOf(block);
 
     if (index !== -1) {
         blocks.splice(index, 1);
@@ -277,7 +283,6 @@ console.log(
 );
 
 function random2D(x, z) {
-
     const value =
         Math.sin(
             x * 127.1 +
@@ -285,8 +290,7 @@ function random2D(x, z) {
             seed
         ) * 43758.5453123;
 
-    return value -
-        Math.floor(value);
+    return value - Math.floor(value);
 }
 
 // ============================================================
@@ -294,25 +298,22 @@ function random2D(x, z) {
 // ============================================================
 
 const terrainHeights = new Map();
+const WORLD_SIZE = 25;
 
 function terrainHeight(x, z) {
-
     const hills =
         Math.sin(
-            (x + seed * 0.00001) *
-            0.11
+            (x + seed * 0.00001) * 0.11
         ) * 2.5;
 
     const valleys =
         Math.cos(
-            (z - seed * 0.00001) *
-            0.12
+            (z - seed * 0.00001) * 0.12
         ) * 2.5;
 
     const small =
         Math.sin(
-            (x + z + seed * 0.00002) *
-            0.20
+            (x + z + seed * 0.00002) * 0.20
         ) * 1.2;
 
     return Math.max(
@@ -329,20 +330,16 @@ function terrainHeight(x, z) {
     );
 }
 
-const WORLD_SIZE = 25;
-
 for (
     let x = -WORLD_SIZE;
     x <= WORLD_SIZE;
     x++
 ) {
-
     for (
         let z = -WORLD_SIZE;
         z <= WORLD_SIZE;
         z++
     ) {
-
         const height =
             terrainHeight(x, z);
 
@@ -356,20 +353,13 @@ for (
             y < height;
             y++
         ) {
-
             let type;
 
-            if (
-                y === height - 1
-            ) {
+            if (y === height - 1) {
                 type = "grass";
-            }
-            else if (
-                y >= height - 4
-            ) {
+            } else if (y >= height - 4) {
                 type = "dirt";
-            }
-            else {
+            } else {
                 type = "stone";
             }
 
@@ -389,27 +379,22 @@ for (
 // ============================================================
 
 function hasTreeNearby(x, z) {
-
     for (
         let dx = -3;
         dx <= 3;
         dx++
     ) {
-
         for (
             let dz = -3;
             dz <= 3;
             dz++
         ) {
-
             const ground =
                 terrainHeights.get(
                     `${x + dx},${z + dz}`
                 );
 
-            if (
-                ground === undefined
-            ) {
+            if (ground === undefined) {
                 continue;
             }
 
@@ -422,8 +407,7 @@ function hasTreeNearby(x, z) {
 
             if (
                 trunk &&
-                trunk.userData.category ===
-                "tree"
+                trunk.userData.category === "tree"
             ) {
                 return true;
             }
@@ -433,18 +417,13 @@ function hasTreeNearby(x, z) {
     return false;
 }
 
-function createTree(
-    x,
-    ground,
-    z
-) {
-
+function createTree(x, ground, z) {
+    // Trunk
     for (
         let y = 0;
         y < 4;
         y++
     ) {
-
         addBlock(
             x,
             ground + y,
@@ -454,24 +433,22 @@ function createTree(
         );
     }
 
+    // Lower leaves
     for (
         let dx = -2;
         dx <= 2;
         dx++
     ) {
-
         for (
             let dz = -2;
             dz <= 2;
             dz++
         ) {
-
             if (
                 Math.abs(dx) +
                 Math.abs(dz) <= 3 &&
                 !(dx === 0 && dz === 0)
             ) {
-
                 addBlock(
                     x + dx,
                     ground + 3,
@@ -483,22 +460,20 @@ function createTree(
         }
     }
 
+    // Upper leaves
     for (
         let dx = -1;
         dx <= 1;
         dx++
     ) {
-
         for (
             let dz = -1;
             dz <= 1;
             dz++
         ) {
-
             if (
                 !(dx === 0 && dz === 0)
             ) {
-
                 addBlock(
                     x + dx,
                     ground + 4,
@@ -524,13 +499,11 @@ for (
     x <= WORLD_SIZE - 4;
     x++
 ) {
-
     for (
         let z = -WORLD_SIZE + 4;
         z <= WORLD_SIZE - 4;
         z++
     ) {
-
         if (
             Math.abs(x) < 5 &&
             Math.abs(z) < 5
@@ -543,9 +516,7 @@ for (
                 `${x},${z}`
             );
 
-        if (
-            ground === undefined
-        ) {
+        if (ground === undefined) {
             continue;
         }
 
@@ -553,7 +524,6 @@ for (
             random2D(x, z) > 0.975 &&
             !hasTreeNearby(x, z)
         ) {
-
             createTree(
                 x,
                 ground,
@@ -606,7 +576,6 @@ const keys = {
 document.addEventListener(
     "keydown",
     event => {
-
         if (event.code === "KeyW")
             keys.w = true;
 
@@ -654,7 +623,6 @@ document.addEventListener(
 document.addEventListener(
     "keyup",
     event => {
-
         if (event.code === "KeyW")
             keys.w = false;
 
@@ -689,7 +657,6 @@ renderer.domElement.addEventListener(
 document.addEventListener(
     "mousemove",
     event => {
-
         if (
             document.pointerLockElement !==
             renderer.domElement
@@ -732,7 +699,6 @@ function playerIntersectsBlock(
     pz,
     block
 ) {
-
     const halfW =
         PLAYER_WIDTH / 2;
 
@@ -777,7 +743,6 @@ function playerCollides(
     feetY,
     z
 ) {
-
     const minX =
         Math.floor(
             x / BLOCK_SIZE -
@@ -822,19 +787,16 @@ function playerCollides(
         bx <= maxX;
         bx++
     ) {
-
         for (
             let by = minY;
             by <= maxY;
             by++
         ) {
-
             for (
                 let bz = minZ;
                 bz <= maxZ;
                 bz++
             ) {
-
                 const block =
                     getBlock(
                         bx,
@@ -865,7 +827,6 @@ function playerCollides(
 // ============================================================
 
 function movePlayer() {
-
     const speed = 0.075;
 
     let forward = 0;
@@ -923,20 +884,14 @@ function movePlayer() {
 
     const dx =
         (
-            direction.x *
-            forward +
-
-            rightVector.x *
-            right
+            direction.x * forward +
+            rightVector.x * right
         ) * speed;
 
     const dz =
         (
-            direction.z *
-            forward +
-
-            rightVector.z *
-            right
+            direction.z * forward +
+            rightVector.z * right
         ) * speed;
 
     const feet =
@@ -950,7 +905,6 @@ function movePlayer() {
             camera.position.z
         )
     ) {
-
         camera.position.x += dx;
     }
 
@@ -961,7 +915,6 @@ function movePlayer() {
             camera.position.z + dz
         )
     ) {
-
         camera.position.z += dz;
     }
 }
@@ -971,7 +924,6 @@ function movePlayer() {
 // ============================================================
 
 function findGroundBelow() {
-
     const playerX =
         camera.position.x;
 
@@ -1000,13 +952,11 @@ function findGroundBelow() {
         x <= gx + 1;
         x++
     ) {
-
         for (
             let z = gz - 1;
             z <= gz + 1;
             z++
         ) {
-
             const blockCenterX =
                 x * BLOCK_SIZE;
 
@@ -1017,7 +967,6 @@ function findGroundBelow() {
                 playerX +
                     PLAYER_WIDTH / 2 >
                     blockCenterX - HALF_BLOCK &&
-
                 playerX -
                     PLAYER_WIDTH / 2 <
                     blockCenterX + HALF_BLOCK;
@@ -1026,7 +975,6 @@ function findGroundBelow() {
                 playerZ +
                     PLAYER_DEPTH / 2 >
                     blockCenterZ - HALF_BLOCK &&
-
                 playerZ -
                     PLAYER_DEPTH / 2 <
                     blockCenterZ + HALF_BLOCK;
@@ -1043,7 +991,6 @@ function findGroundBelow() {
                 y <= 40;
                 y++
             ) {
-
                 const block =
                     getBlock(x, y, z);
 
@@ -1059,7 +1006,6 @@ function findGroundBelow() {
                     top <= feetY + 0.10 &&
                     top > highestTop
                 ) {
-
                     highestTop = top;
                 }
             }
@@ -1074,7 +1020,6 @@ function findGroundBelow() {
 // ============================================================
 
 function updatePhysics() {
-
     const ground =
         findGroundBelow();
 
@@ -1082,12 +1027,10 @@ function updatePhysics() {
         keys.space &&
         grounded
     ) {
-
         velocityY =
             JUMP_POWER;
 
         grounded = false;
-
         keys.space = false;
     }
 
@@ -1112,17 +1055,14 @@ function updatePhysics() {
         nextFeet <= ground &&
         velocityY <= 0
     ) {
-
         camera.position.y =
             ground +
             EYE_HEIGHT;
 
         velocityY = 0;
-
         grounded = true;
 
     } else {
-
         camera.position.y =
             nextY;
 
@@ -1211,7 +1151,6 @@ for (
     i < hotbarTypes.length;
     i++
 ) {
-
     const type =
         hotbarTypes[i];
 
@@ -1263,7 +1202,6 @@ for (
     slot.addEventListener(
         "click",
         event => {
-
             event.stopPropagation();
 
             selectedType = type;
@@ -1277,13 +1215,11 @@ for (
 }
 
 function updateHotbar() {
-
     for (
         let i = 0;
         i < hotbarSlots.length;
         i++
     ) {
-
         const slot =
             hotbarSlots[i];
 
@@ -1291,7 +1227,6 @@ function updateHotbar() {
             hotbarTypes[i] ===
             selectedType
         ) {
-
             slot.style.border =
                 "4px solid white";
 
@@ -1299,7 +1234,6 @@ function updateHotbar() {
                 "0 0 8px white";
 
         } else {
-
             slot.style.border =
                 "3px solid #777";
 
@@ -1324,7 +1258,6 @@ const center =
     new THREE.Vector2(0, 0);
 
 function getTargetBlock() {
-
     raycaster.setFromCamera(
         center,
         camera
@@ -1352,14 +1285,11 @@ function getTargetBlock() {
 let highlight = null;
 
 function updateHighlight() {
-
     const hit =
         getTargetBlock();
 
     if (!hit) {
-
         if (highlight) {
-
             scene.remove(
                 highlight
             );
@@ -1371,7 +1301,6 @@ function updateHighlight() {
     }
 
     if (!highlight) {
-
         const edges =
             new THREE.EdgesGeometry(
                 new THREE.BoxGeometry(
@@ -1402,7 +1331,6 @@ function updateHighlight() {
 // ============================================================
 
 function breakBlock() {
-
     const hit =
         getTargetBlock();
 
@@ -1424,7 +1352,6 @@ function breakBlock() {
 // ============================================================
 
 function placeBlock() {
-
     const hit =
         getTargetBlock();
 
@@ -1545,7 +1472,6 @@ function placeBlock() {
 renderer.domElement.addEventListener(
     "mousedown",
     event => {
-
         if (
             document.pointerLockElement !==
             renderer.domElement
@@ -1553,15 +1479,11 @@ renderer.domElement.addEventListener(
             return;
         }
 
-        if (
-            event.button === 0
-        ) {
+        if (event.button === 0) {
             breakBlock();
         }
 
-        if (
-            event.button === 2
-        ) {
+        if (event.button === 2) {
             placeBlock();
         }
     }
@@ -1579,7 +1501,6 @@ renderer.domElement.addEventListener(
 // ============================================================
 
 function animate() {
-
     requestAnimationFrame(
         animate
     );
@@ -1603,7 +1524,6 @@ animate();
 window.addEventListener(
     "resize",
     () => {
-
         camera.aspect =
             window.innerWidth /
             window.innerHeight;
