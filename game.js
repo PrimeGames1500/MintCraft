@@ -35,7 +35,7 @@ document.body.style.overflow = "hidden";
 document.body.appendChild(renderer.domElement);
 
 // ============================================================
-// LIGHT
+// LIGHTING
 // ============================================================
 
 const sun = new THREE.DirectionalLight(
@@ -55,45 +55,119 @@ scene.add(
 );
 
 // ============================================================
-// BLOCK TYPES
+// TEXTURES
 // ============================================================
+
+const textureLoader =
+    new THREE.TextureLoader();
+
+const grassTopTexture =
+    textureLoader.load(
+        "./textures/grass_top.png"
+    );
+
+const grassSideTexture =
+    textureLoader.load(
+        "./textures/grass_side.png"
+    );
+
+// Keep pixel-art textures sharp
+grassTopTexture.magFilter =
+    THREE.NearestFilter;
+
+grassTopTexture.minFilter =
+    THREE.NearestFilter;
+
+grassSideTexture.magFilter =
+    THREE.NearestFilter;
+
+grassSideTexture.minFilter =
+    THREE.NearestFilter;
+
+// Correct colors for textures
+grassTopTexture.colorSpace =
+    THREE.SRGBColorSpace;
+
+grassSideTexture.colorSpace =
+    THREE.SRGBColorSpace;
+
+// ============================================================
+// BLOCK MATERIALS
+// ============================================================
+
+// Grass uses:
+// 0 = right
+// 1 = left
+// 2 = top
+// 3 = bottom
+// 4 = front
+// 5 = back
+
+const grassMaterial = [
+
+    new THREE.MeshLambertMaterial({
+        map: grassSideTexture
+    }),
+
+    new THREE.MeshLambertMaterial({
+        map: grassSideTexture
+    }),
+
+    new THREE.MeshLambertMaterial({
+        map: grassTopTexture
+    }),
+
+    new THREE.MeshLambertMaterial({
+        map: grassSideTexture
+    }),
+
+    new THREE.MeshLambertMaterial({
+        map: grassSideTexture
+    }),
+
+    new THREE.MeshLambertMaterial({
+        map: grassSideTexture
+    })
+];
 
 const BLOCKS = {
 
     grass: {
-        material: new THREE.MeshLambertMaterial({
-            color: 0x55aa33
-        }),
+        material: grassMaterial,
         color: "#55aa33"
     },
 
     dirt: {
-        material: new THREE.MeshLambertMaterial({
-            color: 0x8b5a2b
-        }),
+        material:
+            new THREE.MeshLambertMaterial({
+                color: 0x8b5a2b
+            }),
         color: "#8b5a2b"
     },
 
     stone: {
-        material: new THREE.MeshLambertMaterial({
-            color: 0x777777
-        }),
+        material:
+            new THREE.MeshLambertMaterial({
+                color: 0x777777
+            }),
         color: "#777777"
     },
 
     wood: {
-        material: new THREE.MeshLambertMaterial({
-            color: 0x6b421f
-        }),
+        material:
+            new THREE.MeshLambertMaterial({
+                color: 0x6b421f
+            }),
         color: "#6b421f"
     },
 
     leaves: {
-        material: new THREE.MeshLambertMaterial({
-            color: 0x2f8f35,
-            transparent: true,
-            opacity: 0.9
-        }),
+        material:
+            new THREE.MeshLambertMaterial({
+                color: 0x2f8f35,
+                transparent: true,
+                opacity: 0.9
+            }),
         color: "#2f8f35"
     }
 };
@@ -186,8 +260,6 @@ function removeBlock(block) {
             block.userData.z
         )
     );
-
-    block.geometry.dispose();
 }
 
 // ============================================================
@@ -367,7 +439,6 @@ function createTree(
     z
 ) {
 
-    // Trunk
     for (
         let y = 0;
         y < 4;
@@ -383,7 +454,6 @@ function createTree(
         );
     }
 
-    // Lower leaves
     for (
         let dx = -2;
         dx <= 2;
@@ -413,7 +483,6 @@ function createTree(
         }
     }
 
-    // Upper leaves
     for (
         let dx = -1;
         dx <= 1;
@@ -441,7 +510,6 @@ function createTree(
         }
     }
 
-    // Top
     addBlock(
         x,
         ground + 5,
@@ -505,11 +573,11 @@ const PLAYER_HEIGHT = 1.35;
 const EYE_HEIGHT = 1.20;
 
 const spawnGround =
-    terrainHeights.get("0,5");
+    terrainHeights.get("0,0");
 
 camera.position.set(
     0,
-    (spawnGround * BLOCK_SIZE) -
+    spawnGround * BLOCK_SIZE -
         HALF_BLOCK +
         EYE_HEIGHT +
         0.05,
@@ -875,7 +943,6 @@ function movePlayer() {
         camera.position.y -
         EYE_HEIGHT;
 
-    // X collision
     if (
         !playerCollides(
             camera.position.x + dx,
@@ -887,7 +954,6 @@ function movePlayer() {
         camera.position.x += dx;
     }
 
-    // Z collision
     if (
         !playerCollides(
             camera.position.x,
@@ -901,7 +967,7 @@ function movePlayer() {
 }
 
 // ============================================================
-// MINECRAFT-STYLE GROUND CHECK
+// GROUND CHECK
 // ============================================================
 
 function findGroundBelow() {
@@ -929,7 +995,6 @@ function findGroundBelow() {
     let highestTop =
         -Infinity;
 
-    // Check blocks immediately around player
     for (
         let x = gx - 1;
         x <= gx + 1;
@@ -942,7 +1007,6 @@ function findGroundBelow() {
             z++
         ) {
 
-            // Make sure player overlaps this column
             const blockCenterX =
                 x * BLOCK_SIZE;
 
@@ -974,7 +1038,6 @@ function findGroundBelow() {
                 continue;
             }
 
-            // Check all blocks vertically
             for (
                 let y = -4;
                 y <= 40;
@@ -992,7 +1055,6 @@ function findGroundBelow() {
                     y * BLOCK_SIZE +
                     HALF_BLOCK;
 
-                // Only blocks below player's feet
                 if (
                     top <= feetY + 0.10 &&
                     top > highestTop
@@ -1008,22 +1070,13 @@ function findGroundBelow() {
 }
 
 // ============================================================
-// MINECRAFT GRAVITY + JUMPING
+// GRAVITY + JUMP
 // ============================================================
 
 function updatePhysics() {
 
     const ground =
         findGroundBelow();
-
-    const feet =
-        camera.position.y -
-        EYE_HEIGHT;
-
-
-    // --------------------------------------------------------
-    // JUMP
-    // --------------------------------------------------------
 
     if (
         keys.space &&
@@ -1038,11 +1091,6 @@ function updatePhysics() {
         keys.space = false;
     }
 
-
-    // --------------------------------------------------------
-    // GRAVITY
-    // --------------------------------------------------------
-
     velocityY -= GRAVITY;
 
     if (
@@ -1051,11 +1099,6 @@ function updatePhysics() {
         velocityY = -0.35;
     }
 
-
-    // --------------------------------------------------------
-    // NEXT POSITION
-    // --------------------------------------------------------
-
     const nextY =
         camera.position.y +
         velocityY;
@@ -1063,11 +1106,6 @@ function updatePhysics() {
     const nextFeet =
         nextY -
         EYE_HEIGHT;
-
-
-    // --------------------------------------------------------
-    // LAND ON BLOCK
-    // --------------------------------------------------------
 
     if (
         ground !== -Infinity &&
@@ -1202,9 +1240,6 @@ for (
 
     preview.style.background =
         BLOCKS[type].color;
-
-    preview.style.border =
-        "2px solid #111";
 
     slot.appendChild(preview);
 
@@ -1438,7 +1473,6 @@ function placeBlock() {
         return;
     }
 
-    // Don't place a block inside player
     const blockX =
         newX * BLOCK_SIZE;
 
