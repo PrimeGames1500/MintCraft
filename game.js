@@ -2,12 +2,12 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.m
 
 // ============================================================
 // MINTCRAFT
-// Full optimized version
+// Full optimized version with fixed movement + collision
 // ============================================================
 
-// ------------------------------------------------------------
+// ============================================================
 // SCENE
-// ------------------------------------------------------------
+// ============================================================
 
 const scene = new THREE.Scene();
 
@@ -43,9 +43,9 @@ document.body.appendChild(
     renderer.domElement
 );
 
-// ------------------------------------------------------------
+// ============================================================
 // LIGHTING
-// ------------------------------------------------------------
+// ============================================================
 
 const sun = new THREE.DirectionalLight(
     0xffffff,
@@ -60,18 +60,17 @@ sun.position.set(
 
 scene.add(sun);
 
-const hemisphereLight =
+scene.add(
     new THREE.HemisphereLight(
         0xffffff,
         0x555555,
         1.5
-    );
+    )
+);
 
-scene.add(hemisphereLight);
-
-// ------------------------------------------------------------
+// ============================================================
 // TEXTURES
-// ------------------------------------------------------------
+// ============================================================
 
 const textureLoader =
     new THREE.TextureLoader();
@@ -128,9 +127,9 @@ const textures = {
         loadTexture("bricks.png")
 };
 
-// ------------------------------------------------------------
+// ============================================================
 // MATERIALS
-// ------------------------------------------------------------
+// ============================================================
 
 function normalMaterial(texture) {
 
@@ -205,26 +204,19 @@ const bricksMaterial =
         textures.bricks
     );
 
-// ------------------------------------------------------------
+// ============================================================
 // BLOCK TYPES
-// ------------------------------------------------------------
+// ============================================================
 
 const BLOCK_TYPES = [
 
     "grass",
-
     "dirt",
-
     "stone",
-
     "wood",
-
     "leaves",
-
     "planks",
-
     "glass",
-
     "bricks"
 
 ];
@@ -254,67 +246,43 @@ const woodMaterials = [
 const BLOCK_INFO = {
 
     grass: {
-
         material: grassMaterials,
-
         color: "#55aa33"
-
     },
 
     dirt: {
-
         material: dirtMaterial,
-
         color: "#8b5a2b"
-
     },
 
     stone: {
-
         material: stoneMaterial,
-
         color: "#777777"
-
     },
 
     wood: {
-
         material: woodMaterials,
-
         color: "#8a5a2b"
-
     },
 
     leaves: {
-
         material: leavesMaterial,
-
         color: "#2f8f35"
-
     },
 
     planks: {
-
         material: planksMaterial,
-
         color: "#c08a4b"
-
     },
 
     glass: {
-
         material: glassMaterial,
-
         color: "#b9e8ff"
-
     },
 
     bricks: {
-
         material: bricksMaterial,
-
         color: "#9b4d3a"
-
     }
 
 };
@@ -361,6 +329,7 @@ function addBlock(
     if (
         blocks.has(key)
     ) {
+
         return false;
     }
 
@@ -432,7 +401,7 @@ function getTerrainHeight(
     z
 ) {
 
-    const first =
+    const a =
         Math.sin(
             (x +
                 seed *
@@ -440,7 +409,7 @@ function getTerrainHeight(
             0.11
         ) * 2.5;
 
-    const second =
+    const b =
         Math.cos(
             (z -
                 seed *
@@ -448,7 +417,7 @@ function getTerrainHeight(
             0.12
         ) * 2.5;
 
-    const third =
+    const c =
         Math.sin(
             (x +
                 z +
@@ -463,9 +432,9 @@ function getTerrainHeight(
             10,
             Math.round(
                 5 +
-                first +
-                second +
-                third
+                a +
+                b +
+                c
             )
         )
     );
@@ -473,7 +442,6 @@ function getTerrainHeight(
 
 const WORLD_SIZE = 25;
 
-// Generate terrain
 for (
     let x = -WORLD_SIZE;
     x <= WORLD_SIZE;
@@ -566,6 +534,7 @@ function treeNearby(
             if (
                 h === undefined
             ) {
+
                 continue;
             }
 
@@ -596,7 +565,6 @@ function createTree(
     z
 ) {
 
-    // Trunk
     for (
         let y = 0;
         y < 4;
@@ -612,7 +580,6 @@ function createTree(
         );
     }
 
-    // Bottom leaves
     for (
         let dx = -2;
         dx <= 2;
@@ -628,10 +595,7 @@ function createTree(
             if (
                 Math.abs(dx) +
                 Math.abs(dz) <= 3 &&
-                !(
-                    dx === 0 &&
-                    dz === 0
-                )
+                !(dx === 0 && dz === 0)
             ) {
 
                 addBlock(
@@ -645,7 +609,6 @@ function createTree(
         }
     }
 
-    // Top leaves
     for (
         let dx = -1;
         dx <= 1;
@@ -654,23 +617,22 @@ function createTree(
 
         for (
             let dz = -1;
-            dz <= 1;
-            dz++
+        dz <= 1;
+        dz++
+    ) {
+
+        if (
+            dx !== 0 ||
+            dz !== 0
         ) {
 
-            if (
-                dx !== 0 ||
-                dz !== 0
-            ) {
-
-                addBlock(
-                    x + dx,
-                    ground + 4,
-                    z + dz,
-                    "leaves",
-                    "tree"
-                );
-            }
+            addBlock(
+                x + dx,
+                ground + 4,
+                z + dz,
+                "leaves",
+                "tree"
+            );
         }
     }
 
@@ -730,7 +692,7 @@ for (
 }
 
 // ============================================================
-// OPTIMIZED INSTANCED RENDERING
+// INSTANCED RENDERING
 // ============================================================
 
 const worldGroup =
@@ -742,14 +704,13 @@ scene.add(
 
 const meshes = {};
 
+const raycastMeshes = [];
+
 const dummy =
     new THREE.Object3D();
 
-const raycastMeshes = [];
-
 function rebuildWorld() {
 
-    // Remove old meshes
     while (
         worldGroup.children.length > 0
     ) {
@@ -778,7 +739,6 @@ function rebuildWorld() {
 
     raycastMeshes.length = 0;
 
-    // Group blocks by type
     const groups = {};
 
     for (
@@ -797,7 +757,6 @@ function rebuildWorld() {
         );
     }
 
-    // Create one InstancedMesh per block type
     for (
         const type of BLOCK_TYPES
     ) {
@@ -902,10 +861,9 @@ const spawnGround =
 
 camera.position.set(
     0,
-    spawnGround -
-        0.5 +
+    spawnGround +
         EYE_HEIGHT +
-        0.05,
+        0.01,
     5
 );
 
@@ -920,7 +878,7 @@ const JUMP_POWER = 7;
 const MOVE_SPEED = 5;
 
 // ============================================================
-// KEY STATE
+// INPUT
 // ============================================================
 
 const keys = {
@@ -938,10 +896,15 @@ const keys = {
 };
 
 // ============================================================
-// COLLISION
+// PLAYER COLLISION
 // ============================================================
 
-function collides(
+// Checks horizontal collision only.
+// IMPORTANT: the bottom and top edges use a tiny
+// margin so standing on a block does NOT count
+// as being inside that block.
+
+function horizontalCollision(
     x,
     feet,
     z
@@ -955,34 +918,34 @@ function collides(
 
     const minX =
         Math.floor(
-            x - halfWidth
+            x - halfWidth + 0.001
         );
 
     const maxX =
         Math.floor(
-            x + halfWidth
+            x + halfWidth - 0.001
         );
 
     const minY =
         Math.floor(
-            feet + 0.001
+            feet + 0.05
         );
 
     const maxY =
         Math.floor(
             feet +
             PLAYER_HEIGHT -
-            0.001
+            0.05
         );
 
     const minZ =
         Math.floor(
-            z - halfDepth
+            z - halfDepth + 0.001
         );
 
     const maxZ =
         Math.floor(
-            z + halfDepth
+            z + halfDepth - 0.001
         );
 
     for (
@@ -1021,37 +984,12 @@ function collides(
 }
 
 // ============================================================
-// GROUND CHECK
+// FIND GROUND DIRECTLY UNDER PLAYER
 // ============================================================
 
-function columnTop(
+function findGroundBelow(
     x,
-    z
-) {
-
-    for (
-        let y = 15;
-        y >= -4;
-        y--
-    ) {
-
-        if (
-            getBlock(
-                x,
-                y,
-                z
-            )
-        ) {
-
-            return y + 0.5;
-        }
-    }
-
-    return -Infinity;
-}
-
-function highestGround(
-    x,
+    feet,
     z
 ) {
 
@@ -1063,25 +1001,25 @@ function highestGround(
 
     const minX =
         Math.floor(
-            x - halfWidth
+            x - halfWidth + 0.001
         );
 
     const maxX =
         Math.floor(
-            x + halfWidth
+            x + halfWidth - 0.001
         );
 
     const minZ =
         Math.floor(
-            z - halfDepth
+            z - halfDepth + 0.001
         );
 
     const maxZ =
         Math.floor(
-            z + halfDepth
+            z + halfDepth - 0.001
         );
 
-    let highest =
+    let bestTop =
         -Infinity;
 
     for (
@@ -1096,32 +1034,63 @@ function highestGround(
             bz++
         ) {
 
-            const top =
-                columnTop(
-                    bx,
-                    bz
+            // Search only a small area below player.
+            const startY =
+                Math.floor(
+                    feet + 0.25
                 );
 
-            if (
-                top > highest
+            const endY =
+                Math.floor(
+                    feet - 0.35
+                );
+
+            for (
+                let by = startY;
+                by >= endY;
+                by--
             ) {
 
-                highest = top;
+                const block =
+                    getBlock(
+                        bx,
+                        by,
+                        bz
+                    );
+
+                if (
+                    block
+                ) {
+
+                    const top =
+                        block.y + 0.5;
+
+                    if (
+                        top <= feet + 0.08 &&
+                        top > bestTop
+                    ) {
+
+                        bestTop =
+                            top;
+                    }
+
+                    break;
+                }
             }
         }
     }
 
-    return highest;
+    return bestTop;
 }
 
 // ============================================================
 // MOVEMENT
 // ============================================================
 
-const movementForward =
+const forwardVector =
     new THREE.Vector3();
 
-const movementRight =
+const rightVector =
     new THREE.Vector3();
 
 function movePlayer(
@@ -1179,54 +1148,52 @@ function movePlayer(
     right /=
         length;
 
-    // Camera's forward direction
-    movementForward.set(
+    // Forward direction based on camera yaw.
+    forwardVector.set(
         0,
         0,
         -1
     );
 
-    movementForward.applyQuaternion(
+    forwardVector.applyQuaternion(
         camera.quaternion
     );
 
-    // Never move vertically from looking up/down
-    movementForward.y = 0;
+    forwardVector.y = 0;
 
     if (
-        movementForward.lengthSq() >
+        forwardVector.lengthSq() >
         0.0001
     ) {
 
-        movementForward.normalize();
+        forwardVector.normalize();
     }
 
-    // Camera's right direction
-    movementRight.set(
-        movementForward.z,
+    rightVector.set(
+        forwardVector.z,
         0,
-        -movementForward.x
+        -forwardVector.x
     );
 
     const distance =
         MOVE_SPEED * delta;
 
-    const dx =
+    const moveX =
         (
-            movementForward.x *
+            forwardVector.x *
             forward
         +
-            movementRight.x *
+            rightVector.x *
             right
         ) *
         distance;
 
-    const dz =
+    const moveZ =
         (
-            movementForward.z *
+            forwardVector.z *
             forward
         +
-            movementRight.z *
+            rightVector.z *
             right
         ) *
         distance;
@@ -1235,33 +1202,35 @@ function movePlayer(
         camera.position.y -
         EYE_HEIGHT;
 
-    // X collision
+    // Move X
     if (
-        !collides(
-            camera.position.x + dx,
+        !horizontalCollision(
+            camera.position.x + moveX,
             feet,
             camera.position.z
         )
     ) {
 
-        camera.position.x += dx;
+        camera.position.x +=
+            moveX;
     }
 
-    // Z collision
+    // Move Z
     if (
-        !collides(
+        !horizontalCollision(
             camera.position.x,
             feet,
-            camera.position.z + dz
+            camera.position.z + moveZ
         )
     ) {
 
-        camera.position.z += dz;
+        camera.position.z +=
+            moveZ;
     }
 }
 
 // ============================================================
-// PHYSICS / JUMPING
+// PHYSICS
 // ============================================================
 
 function updatePhysics(
@@ -1279,7 +1248,10 @@ function updatePhysics(
         camera.position.y -
         EYE_HEIGHT;
 
-    // Start jump
+    // --------------------------------------------------------
+    // JUMP
+    // --------------------------------------------------------
+
     if (
         keys.space &&
         grounded
@@ -1295,11 +1267,26 @@ function updatePhysics(
             false;
     }
 
-    // Gravity
+    // --------------------------------------------------------
+    // GRAVITY
+    // --------------------------------------------------------
+
     velocityY -=
         GRAVITY * delta;
 
-    const verticalMove =
+    // Limit falling speed.
+    if (
+        velocityY < -30
+    ) {
+
+        velocityY = -30;
+    }
+
+    const oldFeet =
+        feet;
+
+    const newFeet =
+        feet +
         velocityY * delta;
 
     // --------------------------------------------------------
@@ -1311,18 +1298,16 @@ function updatePhysics(
     ) {
 
         const ground =
-            highestGround(
+            findGroundBelow(
                 camera.position.x,
+                feet,
                 camera.position.z
             );
-
-        const newFeet =
-            feet + verticalMove;
 
         if (
             ground !== -Infinity &&
             newFeet <= ground &&
-            feet >= ground - 0.35
+            oldFeet >= ground - 0.4
         ) {
 
             feet =
@@ -1333,6 +1318,7 @@ function updatePhysics(
 
             grounded =
                 true;
+
         }
         else {
 
@@ -1345,23 +1331,23 @@ function updatePhysics(
     }
 
     // --------------------------------------------------------
-    // JUMPING UP
+    // MOVING UP
     // --------------------------------------------------------
 
     else {
 
-        const newFeet =
-            feet + verticalMove;
+        const testFeet =
+            newFeet;
 
-        const newHead =
-            newFeet +
+        const testHead =
+            testFeet +
             PLAYER_HEIGHT;
 
-        const currentHead =
+        const oldHead =
             feet +
             PLAYER_HEIGHT;
 
-        let blockedAbove =
+        let hitHead =
             false;
 
         const halfWidth =
@@ -1373,36 +1359,40 @@ function updatePhysics(
         const minX =
             Math.floor(
                 camera.position.x -
-                halfWidth
+                halfWidth +
+                0.001
             );
 
         const maxX =
             Math.floor(
                 camera.position.x +
-                halfWidth
+                halfWidth -
+                0.001
             );
 
         const minZ =
             Math.floor(
                 camera.position.z -
-                halfDepth
+                halfDepth +
+                0.001
             );
 
         const maxZ =
             Math.floor(
                 camera.position.z +
-                halfDepth
+                halfDepth -
+                0.001
             );
 
         const minY =
             Math.floor(
-                currentHead -
+                oldHead +
                 0.001
             );
 
         const maxY =
             Math.floor(
-                newHead +
+                testHead +
                 0.001
             );
 
@@ -1433,13 +1423,13 @@ function updatePhysics(
 
                     if (
                         block &&
-                        block.y + 0.5 >
-                            currentHead &&
                         block.y - 0.5 <
-                            newHead
+                            testHead &&
+                        block.y + 0.5 >
+                            oldHead
                     ) {
 
-                        blockedAbove =
+                        hitHead =
                             true;
                     }
                 }
@@ -1447,7 +1437,7 @@ function updatePhysics(
         }
 
         if (
-            blockedAbove
+            hitHead
         ) {
 
             velocityY =
@@ -1457,7 +1447,7 @@ function updatePhysics(
         else {
 
             feet =
-                newFeet;
+                testFeet;
         }
 
         grounded =
@@ -1468,33 +1458,6 @@ function updatePhysics(
         feet +
         EYE_HEIGHT;
 }
-
-// ============================================================
-// INVENTORY
-// ============================================================
-
-const inventory = {
-
-    grass: 20,
-
-    dirt: 20,
-
-    stone: 20,
-
-    wood: 10,
-
-    leaves: 10,
-
-    planks: 20,
-
-    glass: 10,
-
-    bricks: 20
-
-};
-
-let inventoryOpen =
-    false;
 
 // ============================================================
 // CROSSHAIR
@@ -1644,8 +1607,7 @@ function makeSlot(
             top: "8px",
 
             background:
-                BLOCK_INFO[type]
-                    .color,
+                BLOCK_INFO[type].color,
 
             border:
                 "2px solid #111"
@@ -1722,9 +1684,7 @@ function makeSlot(
 
             event.stopPropagation();
 
-            selectBlock(
-                type
-            );
+            selectBlock(type);
         }
     );
 
@@ -1815,8 +1775,28 @@ function updateHotbar() {
 }
 
 // ============================================================
-// INVENTORY UI
+// INVENTORY
 // ============================================================
+
+const inventory = {
+
+    grass: 20,
+
+    dirt: 20,
+
+    stone: 20,
+
+    wood: 10,
+
+    leaves: 10,
+
+    planks: 20,
+
+    glass: 10,
+
+    bricks: 20
+
+};
 
 const inventoryPanel =
     document.createElement(
@@ -2000,6 +1980,9 @@ document.body.appendChild(
     inventoryPanel
 );
 
+let inventoryOpen =
+    false;
+
 function updateInventory() {
 
     for (
@@ -2070,7 +2053,7 @@ updateHotbar();
 updateInventory();
 
 // ============================================================
-// KEYBOARD INPUT
+// KEYBOARD
 // ============================================================
 
 document.addEventListener(
@@ -2263,7 +2246,7 @@ let yaw = 0;
 let pitch = 0;
 
 // ============================================================
-// BLOCK HIGHLIGHT
+// BLOCK TARGETING
 // ============================================================
 
 const raycaster =
@@ -2271,7 +2254,7 @@ const raycaster =
 
 raycaster.far = 6;
 
-const screenCenter =
+const center =
     new THREE.Vector2(
         0,
         0
@@ -2280,17 +2263,15 @@ const screenCenter =
 let currentTarget =
     null;
 
-const highlight =
+const outline =
     new THREE.LineSegments(
 
         new THREE.EdgesGeometry(
-
             new THREE.BoxGeometry(
                 1.04,
                 1.04,
                 1.04
             )
-
         ),
 
         new THREE.LineBasicMaterial({
@@ -2299,14 +2280,14 @@ const highlight =
 
     );
 
-highlight.visible =
+outline.visible =
     false;
 
-highlight.raycast =
+outline.raycast =
     function() {};
 
 scene.add(
-    highlight
+    outline
 );
 
 function getTargetBlock() {
@@ -2319,7 +2300,7 @@ function getTargetBlock() {
     }
 
     raycaster.setFromCamera(
-        screenCenter,
+        center,
         camera
     );
 
@@ -2339,11 +2320,8 @@ function getTargetBlock() {
     const hit =
         hits[0];
 
-    const mesh =
-        hit.object;
-
     const list =
-        mesh.userData.blocks;
+        hit.object.userData.blocks;
 
     const block =
         list[
@@ -2366,23 +2344,23 @@ function getTargetBlock() {
     };
 }
 
-let rayTimer = 0;
+let targetTimer = 0;
 
 function updateHighlight(
     delta
 ) {
 
-    rayTimer -=
+    targetTimer -=
         delta;
 
     if (
-        rayTimer > 0
+        targetTimer > 0
     ) {
 
         return;
     }
 
-    rayTimer =
+    targetTimer =
         0.05;
 
     currentTarget =
@@ -2392,7 +2370,7 @@ function updateHighlight(
         currentTarget
     ) {
 
-        highlight.position.set(
+        outline.position.set(
 
             currentTarget.block.x,
 
@@ -2402,19 +2380,19 @@ function updateHighlight(
 
         );
 
-        highlight.visible =
+        outline.visible =
             true;
 
     }
     else {
 
-        highlight.visible =
+        outline.visible =
             false;
     }
 }
 
 // ============================================================
-// BREAKING BLOCKS
+// BREAK BLOCK
 // ============================================================
 
 function breakBlock() {
@@ -2432,7 +2410,6 @@ function breakBlock() {
     const block =
         target.block;
 
-    // Don't destroy bottom world layer
     if (
         block.y <= -4
     ) {
@@ -2440,17 +2417,9 @@ function breakBlock() {
         return;
     }
 
-    // Add block to inventory
-    if (
-        inventory[block.type] ===
-        undefined
-    ) {
-
-        inventory[block.type] =
-            0;
-    }
-
-    inventory[block.type]++;
+    inventory[
+        block.type
+    ]++;
 
     removeBlock(
         block.x,
@@ -2466,7 +2435,7 @@ function breakBlock() {
 }
 
 // ============================================================
-// PLACING BLOCKS
+// PLACE BLOCK
 // ============================================================
 
 function placeBlock() {
@@ -2482,8 +2451,7 @@ function placeBlock() {
     }
 
     if (
-        inventory[selectedType] <=
-        0
+        inventory[selectedType] <= 0
     ) {
 
         return;
@@ -2507,7 +2475,6 @@ function placeBlock() {
         block.z +
         Math.round(normal.z);
 
-    // Can't place inside another block
     if (
         getBlock(
             x,
@@ -2519,10 +2486,7 @@ function placeBlock() {
         return;
     }
 
-    // --------------------------------------------------------
-    // Prevent placing inside player
-    // --------------------------------------------------------
-
+    // Check if new block would overlap player
     const feet =
         camera.position.y -
         EYE_HEIGHT;
@@ -2588,7 +2552,9 @@ function placeBlock() {
         "placed"
     );
 
-    inventory[selectedType]--;
+    inventory[
+        selectedType
+    ]--;
 
     rebuildWorld();
 
@@ -2620,7 +2586,6 @@ renderer.domElement.addEventListener(
             return;
         }
 
-        // Left click = break
         if (
             event.button === 0
         ) {
@@ -2628,7 +2593,6 @@ renderer.domElement.addEventListener(
             breakBlock();
         }
 
-        // Right click = place
         if (
             event.button === 2
         ) {
@@ -2695,7 +2659,7 @@ requestAnimationFrame(
 );
 
 // ============================================================
-// WINDOW RESIZE
+// RESIZE
 // ============================================================
 
 window.addEventListener(
