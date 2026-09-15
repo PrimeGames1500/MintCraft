@@ -3,10 +3,6 @@
 (function () {
     "use strict";
 
-    /* =========================
-       LOAD THREE.JS
-    ========================= */
-
     function startGame() {
         if (window.THREE) {
             initGame();
@@ -14,34 +10,27 @@
         }
 
         var script = document.createElement("script");
-        script.src = "https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.min.js";
 
-        script.onload = function () {
-            initGame();
-        };
+        script.src =
+            "https://unpkg.com/three@0.179.1/build/three.min.js";
+
+        script.onload = initGame;
 
         script.onerror = function () {
             document.body.innerHTML =
-                "<div style='background:#111;color:white;padding:30px;font-family:Arial'>" +
-                "MintCraft could not load Three.js." +
+                "<div style='color:white;background:#111;padding:30px;font-family:Arial'>" +
+                "MintCraft could not load Three.js. Check your internet connection." +
                 "</div>";
         };
 
         document.head.appendChild(script);
     }
 
-    /* =========================
-       GAME
-    ========================= */
-
     function initGame() {
 
         var THREE = window.THREE;
 
-        /* =========================
-           SETTINGS
-        ========================= */
-
+        var BLOCK_SIZE = 1;
         var WORLD_SIZE = 48;
         var WORLD_HEIGHT = 20;
 
@@ -50,14 +39,10 @@
         var PLAYER_EYE = 1.55;
 
         var MOVE_SPEED = 5.0;
-        var GRAVITY = 18.0;
+        var GRAVITY = 18;
         var JUMP_POWER = 7.0;
 
         var REACH = 6;
-
-        /* =========================
-           BLOCKS
-        ========================= */
 
         var BLOCKS = {
             grass: {
@@ -128,33 +113,30 @@
             "bricks"
         ];
 
-        /* =========================
-           SCENE
-        ========================= */
-
         var scene = new THREE.Scene();
 
-        scene.background = new THREE.Color(0x87ceeb);
+        scene.background =
+            new THREE.Color(0x87ceeb);
 
-        scene.fog = new THREE.Fog(
-            0x87ceeb,
-            35,
-            100
-        );
+        scene.fog =
+            new THREE.Fog(0x87ceeb, 35, 95);
 
-        var camera = new THREE.PerspectiveCamera(
-            75,
-            window.innerWidth / window.innerHeight,
-            0.05,
-            200
-        );
+        var camera =
+            new THREE.PerspectiveCamera(
+                75,
+                window.innerWidth /
+                    window.innerHeight,
+                0.05,
+                200
+            );
 
         camera.rotation.order = "YXZ";
 
-        var renderer = new THREE.WebGLRenderer({
-            antialias: false,
-            powerPreference: "high-performance"
-        });
+        var renderer =
+            new THREE.WebGLRenderer({
+                antialias: false,
+                powerPreference: "high-performance"
+            });
 
         renderer.setSize(
             window.innerWidth,
@@ -168,19 +150,9 @@
             )
         );
 
-        renderer.outputColorSpace =
-            THREE.SRGBColorSpace;
-
-        document.body.style.margin = "0";
-        document.body.style.overflow = "hidden";
-
         document.body.appendChild(
             renderer.domElement
         );
-
-        /* =========================
-           LIGHTING
-        ========================= */
 
         var ambient =
             new THREE.HemisphereLight(
@@ -197,28 +169,18 @@
                 1.4
             );
 
-        sun.position.set(
-            40,
-            70,
-            30
-        );
+        sun.position.set(40, 70, 30);
 
         scene.add(sun);
-
-        /* =========================
-           TEXTURES
-        ========================= */
 
         var textureLoader =
             new THREE.TextureLoader();
 
-        var textures = {};
-
-        function loadTexture(filename) {
+        function loadTexture(name) {
 
             var texture =
                 textureLoader.load(
-                    "textures/" + filename
+                    "textures/" + name
                 );
 
             texture.magFilter =
@@ -227,45 +189,20 @@
             texture.minFilter =
                 THREE.NearestFilter;
 
-            texture.colorSpace =
-                THREE.SRGBColorSpace;
-
             return texture;
         }
 
-        textures.grassSide =
-            loadTexture("grass_side.png");
+        var textures = {};
 
-        textures.grassTop =
-            loadTexture("grass_top.png");
+        Object.keys(BLOCKS).forEach(
+            function (name) {
 
-        textures.dirt =
-            loadTexture("dirt.png");
-
-        textures.stone =
-            loadTexture("stone.png");
-
-        textures.woodSide =
-            loadTexture("wood_side.png");
-
-        textures.woodTop =
-            loadTexture("wood_top.png");
-
-        textures.leaves =
-            loadTexture("leaves.png");
-
-        textures.planks =
-            loadTexture("planks.png");
-
-        textures.glass =
-            loadTexture("glass.png");
-
-        textures.bricks =
-            loadTexture("bricks.png");
-
-        /* =========================
-           WORLD
-        ========================= */
+                textures[name] =
+                    loadTexture(
+                        BLOCKS[name].texture
+                    );
+            }
+        );
 
         var world = new Map();
 
@@ -281,7 +218,7 @@
                 z < -WORLD_SIZE ||
                 z > WORLD_SIZE ||
                 y < 0 ||
-                y > WORLD_HEIGHT + 10
+                y > WORLD_HEIGHT
             ) {
                 return;
             }
@@ -323,29 +260,28 @@
             ].solid;
         }
 
-        /* =========================
-           TERRAIN
-        ========================= */
-
         function terrainHeight(x, z) {
 
-            var h =
+            var height =
                 4 +
                 Math.sin(x * 0.15) * 2 +
                 Math.cos(z * 0.13) * 2 +
-                Math.sin((x + z) * 0.07) * 2;
+                Math.sin(
+                    (x + z) * 0.07
+                ) * 2;
 
-            h = Math.floor(h);
+            height =
+                Math.floor(height);
 
-            if (h < 1) {
-                h = 1;
+            if (height < 1) {
+                height = 1;
             }
 
-            if (h > 10) {
-                h = 10;
+            if (height > 10) {
+                height = 10;
             }
 
-            return h;
+            return height;
         }
 
         function generateTerrain() {
@@ -362,7 +298,7 @@
                     z++
                 ) {
 
-                    var h =
+                    var height =
                         terrainHeight(
                             x,
                             z
@@ -370,11 +306,11 @@
 
                     for (
                         var y = 0;
-                        y <= h;
+                        y <= height;
                         y++
                     ) {
 
-                        if (y === h) {
+                        if (y === height) {
 
                             addBlock(
                                 x,
@@ -384,7 +320,7 @@
                             );
 
                         } else if (
-                            y >= h - 2
+                            y >= height - 2
                         ) {
 
                             addBlock(
@@ -408,23 +344,22 @@
             }
         }
 
-        /* =========================
-           TREES
-        ========================= */
-
         function canTreeGrow(x, z) {
 
-            var h =
-                terrainHeight(x, z);
+            var height =
+                terrainHeight(
+                    x,
+                    z
+                );
 
-            if (h < 3) {
+            if (height < 3) {
                 return false;
             }
 
             var block =
                 getBlock(
                     x,
-                    h,
+                    height,
                     z
                 );
 
@@ -484,9 +419,7 @@
                             Math.abs(dx) +
                             Math.abs(dz);
 
-                        if (
-                            distance <= 3
-                        ) {
+                        if (distance <= 3) {
 
                             addBlock(
                                 x + dx,
@@ -535,14 +468,8 @@
                         chance -
                         Math.floor(chance);
 
-                    if (
-                        chance > 0.78
-                    ) {
-
-                        makeTree(
-                            x,
-                            z
-                        );
+                    if (chance > 0.78) {
+                        makeTree(x, z);
                     }
                 }
             }
@@ -551,10 +478,6 @@
         generateTerrain();
         generateTrees();
 
-        /* =========================
-           INSTANCED RENDERING
-        ========================= */
-
         var meshes = {};
         var geometries = {};
         var materials = {};
@@ -562,101 +485,18 @@
         var dummy =
             new THREE.Object3D();
 
-        function makeMaterial(
-            texture,
-            transparent
-        ) {
-
-            return new THREE.MeshLambertMaterial({
-                map: texture,
-                transparent: transparent || false,
-                opacity: transparent ? 0.55 : 1,
-                depthWrite: !transparent
-            });
-        }
-
-        function getMaterials(type) {
-
-            if (materials[type]) {
-                return materials[type];
-            }
-
-            if (type === "grass") {
-
-                materials[type] = [
-                    makeMaterial(
-                        textures.grassSide
-                    ),
-                    makeMaterial(
-                        textures.grassSide
-                    ),
-                    makeMaterial(
-                        textures.grassTop
-                    ),
-                    makeMaterial(
-                        textures.dirt
-                    ),
-                    makeMaterial(
-                        textures.grassSide
-                    ),
-                    makeMaterial(
-                        textures.grassSide
-                    )
-                ];
-
-            } else if (type === "wood") {
-
-                materials[type] = [
-                    makeMaterial(
-                        textures.woodSide
-                    ),
-                    makeMaterial(
-                        textures.woodSide
-                    ),
-                    makeMaterial(
-                        textures.woodTop
-                    ),
-                    makeMaterial(
-                        textures.woodTop
-                    ),
-                    makeMaterial(
-                        textures.woodSide
-                    ),
-                    makeMaterial(
-                        textures.woodSide
-                    )
-                ];
-
-            } else {
-
-                var texture =
-                    textures[type];
-
-                materials[type] =
-                    makeMaterial(
-                        texture,
-                        type === "glass"
-                    );
-            }
-
-            return materials[type];
-        }
-
         function buildWorldMeshes() {
 
-            blockNames.forEach(
+            Object.keys(meshes).forEach(
                 function (name) {
 
-                    if (meshes[name]) {
-
-                        scene.remove(
-                            meshes[name]
-                        );
-
-                        meshes[name] = null;
-                    }
+                    scene.remove(
+                        meshes[name]
+                    );
                 }
             );
+
+            meshes = {};
 
             var counts = {};
 
@@ -670,8 +510,9 @@
                 function (block) {
 
                     if (
-                        counts[block.type] !==
-                        undefined
+                        counts[
+                            block.type
+                        ] !== undefined
                     ) {
 
                         counts[
@@ -701,17 +542,40 @@
                             );
                     }
 
+                    if (!materials[name]) {
+
+                        materials[name] =
+                            new THREE.MeshLambertMaterial(
+                                {
+                                    map:
+                                        textures[name],
+
+                                    transparent:
+                                        name ===
+                                        "glass",
+
+                                    opacity:
+                                        name ===
+                                        "glass"
+                                            ? 0.55
+                                            : 1,
+
+                                    depthWrite:
+                                        name !==
+                                        "glass"
+                                }
+                            );
+                    }
+
                     var mesh =
                         new THREE.InstancedMesh(
                             geometries[name],
-                            getMaterials(name),
+                            materials[name],
                             count
                         );
 
                     mesh.userData.blockType =
                         name;
-
-                    mesh.userData.blocks = [];
 
                     var index = 0;
 
@@ -719,7 +583,8 @@
                         function (block) {
 
                             if (
-                                block.type !== name
+                                block.type !==
+                                name
                             ) {
                                 return;
                             }
@@ -728,12 +593,6 @@
                                 block.x,
                                 block.y,
                                 block.z
-                            );
-
-                            dummy.rotation.set(
-                                0,
-                                0,
-                                0
                             );
 
                             dummy.scale.set(
@@ -749,18 +608,12 @@
                                 dummy.matrix
                             );
 
-                            mesh.userData.blocks[
-                                index
-                            ] = block;
-
                             index++;
                         }
                     );
 
-                    mesh.instanceMatrix.needsUpdate =
-                        true;
-
-                    mesh.frustumCulled = true;
+                    mesh.instanceMatrix
+                        .needsUpdate = true;
 
                     scene.add(mesh);
 
@@ -772,17 +625,13 @@
 
         buildWorldMeshes();
 
-        /* =========================
-           PLAYER
-        ========================= */
-
         var player = {
 
             x: 0,
 
             y:
                 terrainHeight(0, 0) +
-                0.501,
+                1.01,
 
             z: 0,
 
@@ -799,29 +648,45 @@
             player.z
         );
 
-        /* =========================
-           CONTROLS
-        ========================= */
-
         var keys = {};
 
+        var inventoryOpen = false;
+
         var selectedSlot = 0;
+
+        var inventory = {
+
+            grass: 20,
+            dirt: 20,
+            stone: 20,
+            wood: 20,
+            leaves: 20,
+            planks: 20,
+            glass: 20,
+            bricks: 20
+        };
 
         window.addEventListener(
             "keydown",
             function (event) {
 
-                keys[event.code] = true;
-
                 if (
-                    event.code === "Digit1" ||
-                    event.code === "Digit2" ||
-                    event.code === "Digit3" ||
-                    event.code === "Digit4" ||
-                    event.code === "Digit5" ||
-                    event.code === "Digit6" ||
-                    event.code === "Digit7" ||
-                    event.code === "Digit8"
+                    event.code ===
+                        "Digit1" ||
+                    event.code ===
+                        "Digit2" ||
+                    event.code ===
+                        "Digit3" ||
+                    event.code ===
+                        "Digit4" ||
+                    event.code ===
+                        "Digit5" ||
+                    event.code ===
+                        "Digit6" ||
+                    event.code ===
+                        "Digit7" ||
+                    event.code ===
+                        "Digit8"
                 ) {
 
                     selectedSlot =
@@ -833,20 +698,24 @@
                         ) - 1;
 
                     updateHotbar();
-                    updateInventory();
                 }
 
                 if (
-                    event.code === "KeyE"
+                    event.code ===
+                    "KeyE"
                 ) {
 
-                    event.preventDefault();
-
                     toggleInventory();
+
+                    return;
                 }
 
+                keys[event.code] =
+                    true;
+
                 if (
-                    event.code === "Space" &&
+                    event.code ===
+                        "Space" &&
                     player.grounded &&
                     !inventoryOpen
                 ) {
@@ -864,13 +733,10 @@
             "keyup",
             function (event) {
 
-                keys[event.code] = false;
+                keys[event.code] =
+                    false;
             }
         );
-
-        /* =========================
-           MOUSE LOOK
-        ========================= */
 
         var yaw = 0;
         var pitch = 0;
@@ -883,7 +749,8 @@
                     !inventoryOpen
                 ) {
 
-                    renderer.domElement.requestPointerLock();
+                    renderer.domElement
+                        .requestPointerLock();
                 }
             }
         );
@@ -894,12 +761,9 @@
 
                 if (
                     document.pointerLockElement !==
-                    renderer.domElement
+                        renderer.domElement ||
+                    inventoryOpen
                 ) {
-                    return;
-                }
-
-                if (inventoryOpen) {
                     return;
                 }
 
@@ -931,116 +795,47 @@
             }
         );
 
-        /* =========================
-           COLLISION
-        ========================= */
-
-        function overlapsPlayerBlock(
-            px,
-            py,
-            pz,
-            bx,
-            by,
-            bz
-        ) {
-
-            var half =
-                PLAYER_WIDTH / 2;
-
-            var playerMinX =
-                px - half;
-
-            var playerMaxX =
-                px + half;
-
-            var playerMinY =
-                py;
-
-            var playerMaxY =
-                py +
-                PLAYER_HEIGHT;
-
-            var playerMinZ =
-                pz - half;
-
-            var playerMaxZ =
-                pz + half;
-
-            var blockMinX =
-                bx - 0.5;
-
-            var blockMaxX =
-                bx + 0.5;
-
-            var blockMinY =
-                by - 0.5;
-
-            var blockMaxY =
-                by + 0.5;
-
-            var blockMinZ =
-                bz - 0.5;
-
-            var blockMaxZ =
-                bz + 0.5;
-
-            return (
-                playerMaxX >
-                    blockMinX + 0.0001 &&
-                playerMinX <
-                    blockMaxX - 0.0001 &&
-
-                playerMaxY >
-                    blockMinY + 0.0001 &&
-                playerMinY <
-                    blockMaxY - 0.0001 &&
-
-                playerMaxZ >
-                    blockMinZ + 0.0001 &&
-                playerMinZ <
-                    blockMaxZ - 0.0001
-            );
-        }
-
         function horizontalCollision(
             px,
             py,
             pz
         ) {
 
-            var half =
-                PLAYER_WIDTH / 2;
-
             var minX =
                 Math.floor(
-                    px - half
-                ) - 1;
+                    px -
+                    PLAYER_WIDTH / 2
+                );
 
             var maxX =
                 Math.floor(
-                    px + half
-                ) + 1;
+                    px +
+                    PLAYER_WIDTH / 2
+                );
 
             var minY =
                 Math.floor(
-                    py
-                ) - 1;
+                    py + 0.05
+                );
 
             var maxY =
                 Math.floor(
                     py +
-                    PLAYER_HEIGHT
-                ) + 1;
+                    PLAYER_HEIGHT -
+                    0.05
+                );
 
             var minZ =
                 Math.floor(
-                    pz - half
-                ) - 1;
+                    pz -
+                    PLAYER_WIDTH / 2
+                );
 
             var maxZ =
                 Math.floor(
-                    pz + half
-                ) + 1;
+                    pz +
+                    PLAYER_WIDTH / 2
+                );
 
             for (
                 var x = minX;
@@ -1061,20 +856,7 @@
                     ) {
 
                         if (
-                            !isSolid(
-                                x,
-                                y,
-                                z
-                            )
-                        ) {
-                            continue;
-                        }
-
-                        if (
-                            overlapsPlayerBlock(
-                                px,
-                                py,
-                                pz,
+                            isSolid(
                                 x,
                                 y,
                                 z
@@ -1089,231 +871,6 @@
 
             return false;
         }
-
-        function findGround(
-            px,
-            pz,
-            oldY,
-            newY
-        ) {
-
-            var half =
-                PLAYER_WIDTH / 2;
-
-            var minX =
-                Math.floor(
-                    px - half
-                ) - 1;
-
-            var maxX =
-                Math.floor(
-                    px + half
-                ) + 1;
-
-            var minZ =
-                Math.floor(
-                    pz - half
-                ) - 1;
-
-            var maxZ =
-                Math.floor(
-                    pz + half
-                ) + 1;
-
-            var bestY = null;
-
-            for (
-                var x = minX;
-                x <= maxX;
-                x++
-            ) {
-
-                for (
-                    var z = minZ;
-                    z <= maxZ;
-                    z++
-                ) {
-
-                    var blockXMin =
-                        x - 0.5;
-
-                    var blockXMax =
-                        x + 0.5;
-
-                    var playerMinX =
-                        px - half;
-
-                    var playerMaxX =
-                        px + half;
-
-                    if (
-                        playerMaxX <=
-                        blockXMin ||
-                        playerMinX >=
-                        blockXMax
-                    ) {
-                        continue;
-                    }
-
-                    var block =
-                        getBlock(
-                            x,
-                            0,
-                            z
-                        );
-
-                    for (
-                        var y =
-                            Math.floor(
-                                newY
-                            ) - 2;
-                        y <=
-                            Math.floor(
-                                oldY
-                            ) + 2;
-                        y++
-                    ) {
-
-                        if (
-                            !isSolid(
-                                x,
-                                y,
-                                z
-                            )
-                        ) {
-                            continue;
-                        }
-
-                        var top =
-                            y + 0.5;
-
-                        if (
-                            oldY >=
-                                top - 0.05 &&
-                            newY <=
-                                top + 0.001
-                        ) {
-
-                            if (
-                                bestY === null ||
-                                top > bestY
-                            ) {
-
-                                bestY =
-                                    top;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return bestY;
-        }
-
-        function findCeiling(
-            px,
-            pz,
-            oldY,
-            newY
-        ) {
-
-            var half =
-                PLAYER_WIDTH / 2;
-
-            var minX =
-                Math.floor(
-                    px - half
-                ) - 1;
-
-            var maxX =
-                Math.floor(
-                    px + half
-                ) + 1;
-
-            var minZ =
-                Math.floor(
-                    pz - half
-                ) - 1;
-
-            var maxZ =
-                Math.floor(
-                    pz + half
-                ) + 1;
-
-            var oldHead =
-                oldY +
-                PLAYER_HEIGHT;
-
-            var newHead =
-                newY +
-                PLAYER_HEIGHT;
-
-            var best =
-                null;
-
-            for (
-                var x = minX;
-                x <= maxX;
-                x++
-            ) {
-
-                for (
-                    var z = minZ;
-                    z <= maxZ;
-                    z++
-                ) {
-
-                    for (
-                        var y =
-                            Math.floor(
-                                oldHead
-                            ) - 1;
-                        y <=
-                            Math.floor(
-                                newHead
-                            ) + 1;
-                        y++
-                    ) {
-
-                        if (
-                            !isSolid(
-                                x,
-                                y,
-                                z
-                            )
-                        ) {
-                            continue;
-                        }
-
-                        var bottom =
-                            y - 0.5;
-
-                        if (
-                            oldHead <=
-                                bottom + 0.05 &&
-                            newHead >=
-                                bottom
-                        ) {
-
-                            if (
-                                best === null ||
-                                bottom < best
-                            ) {
-
-                                best =
-                                    bottom;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return best;
-        }
-
-        /* =========================
-           MOVEMENT
-        ========================= */
 
         function updateMovement(dt) {
 
@@ -1346,14 +903,19 @@
 
             var length =
                 Math.sqrt(
-                    forward * forward +
-                    right * right
+                    forward *
+                        forward +
+                    right *
+                        right
                 );
 
             if (length > 0) {
 
-                forward /= length;
-                right /= length;
+                forward /=
+                    length;
+
+                right /=
+                    length;
 
                 var sin =
                     Math.sin(yaw);
@@ -1366,14 +928,16 @@
                     (cos * right);
 
                 var moveZ =
-                    (-cos * forward) +
-                    (-sin * right);
+                    (-cos * forward) -
+                    (sin * right);
 
                 player.vx =
-                    moveX * MOVE_SPEED;
+                    moveX *
+                    MOVE_SPEED;
 
                 player.vz =
-                    moveZ * MOVE_SPEED;
+                    moveZ *
+                    MOVE_SPEED;
 
             } else {
 
@@ -1393,7 +957,8 @@
                 )
             ) {
 
-                player.x = newX;
+                player.x =
+                    newX;
             }
 
             var newZ =
@@ -1408,22 +973,16 @@
                 )
             ) {
 
-                player.z = newZ;
+                player.z =
+                    newZ;
             }
         }
-
-        /* =========================
-           PHYSICS
-        ========================= */
 
         function updatePhysics(dt) {
 
             if (inventoryOpen) {
                 return;
             }
-
-            var oldY =
-                player.y;
 
             player.vy -=
                 GRAVITY * dt;
@@ -1434,20 +993,67 @@
 
             if (player.vy <= 0) {
 
-                var ground =
-                    findGround(
-                        player.x,
-                        player.z,
-                        oldY,
-                        newY
+                var feetBlock =
+                    Math.floor(
+                        newY - 0.001
                     );
 
-                if (
-                    ground !== null
+                var minX =
+                    Math.floor(
+                        player.x -
+                        PLAYER_WIDTH / 2
+                    );
+
+                var maxX =
+                    Math.floor(
+                        player.x +
+                        PLAYER_WIDTH / 2
+                    );
+
+                var minZ =
+                    Math.floor(
+                        player.z -
+                        PLAYER_WIDTH / 2
+                    );
+
+                var maxZ =
+                    Math.floor(
+                        player.z +
+                        PLAYER_WIDTH / 2
+                    );
+
+                var landed = false;
+
+                for (
+                    var x = minX;
+                    x <= maxX;
+                    x++
                 ) {
 
+                    for (
+                        var z = minZ;
+                        z <= maxZ;
+                        z++
+                    ) {
+
+                        if (
+                            isSolid(
+                                x,
+                                feetBlock,
+                                z
+                            )
+                        ) {
+
+                            landed = true;
+                        }
+                    }
+                }
+
+                if (landed) {
+
                     player.y =
-                        ground + 0.001;
+                        feetBlock +
+                        1.001;
 
                     player.vy = 0;
 
@@ -1465,20 +1071,71 @@
 
             } else {
 
-                var ceiling =
-                    findCeiling(
-                        player.x,
-                        player.z,
-                        oldY,
-                        newY
+                var headY =
+                    newY +
+                    PLAYER_HEIGHT;
+
+                var blockY =
+                    Math.floor(
+                        headY
                     );
 
-                if (
-                    ceiling !== null
+                var minX2 =
+                    Math.floor(
+                        player.x -
+                        PLAYER_WIDTH / 2
+                    );
+
+                var maxX2 =
+                    Math.floor(
+                        player.x +
+                        PLAYER_WIDTH / 2
+                    );
+
+                var minZ2 =
+                    Math.floor(
+                        player.z -
+                        PLAYER_WIDTH / 2
+                    );
+
+                var maxZ2 =
+                    Math.floor(
+                        player.z +
+                        PLAYER_WIDTH / 2
+                    );
+
+                var hitHead =
+                    false;
+
+                for (
+                    var xx = minX2;
+                    xx <= maxX2;
+                    xx++
                 ) {
 
+                    for (
+                        var zz = minZ2;
+                        zz <= maxZ2;
+                        zz++
+                    ) {
+
+                        if (
+                            isSolid(
+                                xx,
+                                blockY,
+                                zz
+                            )
+                        ) {
+
+                            hitHead = true;
+                        }
+                    }
+                }
+
+                if (hitHead) {
+
                     player.y =
-                        ceiling -
+                        blockY -
                         PLAYER_HEIGHT -
                         0.001;
 
@@ -1494,11 +1151,7 @@
                     false;
             }
 
-            /* Emergency recovery */
-
-            if (
-                player.y < -20
-            ) {
+            if (player.y < -20) {
 
                 player.x = 0;
                 player.z = 0;
@@ -1507,12 +1160,9 @@
                     terrainHeight(
                         0,
                         0
-                    ) + 0.501;
+                    ) + 1.01;
 
                 player.vy = 0;
-
-                player.grounded =
-                    false;
             }
 
             camera.position.set(
@@ -1521,28 +1171,6 @@
                 player.z
             );
         }
-
-        /* =========================
-           INVENTORY
-        ========================= */
-
-        var inventory = {
-
-            grass: 20,
-            dirt: 20,
-            stone: 20,
-            wood: 20,
-            leaves: 20,
-            planks: 20,
-            glass: 20,
-            bricks: 20
-        };
-
-        var inventoryOpen = false;
-
-        /* =========================
-           HOTBAR
-        ========================= */
 
         var hotbar =
             document.createElement(
@@ -1576,7 +1204,8 @@
 
         function updateHotbar() {
 
-            hotbar.innerHTML = "";
+            hotbar.innerHTML =
+                "";
 
             blockNames.forEach(
                 function (
@@ -1599,7 +1228,8 @@
                         "rgba(0,0,0,0.65)";
 
                     slot.style.border =
-                        index === selectedSlot
+                        index ===
+                        selectedSlot
                             ? "3px solid white"
                             : "2px solid #777";
 
@@ -1616,7 +1246,9 @@
 
                     image.src =
                         "textures/" +
-                        BLOCKS[name].texture;
+                        BLOCKS[
+                            name
+                        ].texture;
 
                     image.style.width =
                         "100%";
@@ -1637,7 +1269,9 @@
                         );
 
                     number.textContent =
-                        String(index + 1);
+                        String(
+                            index + 1
+                        );
 
                     number.style.position =
                         "absolute";
@@ -1665,8 +1299,9 @@
 
                     amount.textContent =
                         String(
-                            inventory[name] ||
-                            0
+                            inventory[
+                                name
+                            ] || 0
                         );
 
                     amount.style.position =
@@ -1695,7 +1330,6 @@
                                 index;
 
                             updateHotbar();
-                            updateInventory();
                         };
 
                     hotbar.appendChild(
@@ -1706,10 +1340,6 @@
         }
 
         updateHotbar();
-
-        /* =========================
-           INVENTORY UI
-        ========================= */
 
         var inventoryPanel =
             document.createElement(
@@ -1779,7 +1409,8 @@
                         "rgba(0,0,0,0.7)";
 
                     slot.style.border =
-                        index === selectedSlot
+                        index ===
+                        selectedSlot
                             ? "3px solid yellow"
                             : "2px solid #777";
 
@@ -1796,7 +1427,9 @@
 
                     img.src =
                         "textures/" +
-                        BLOCKS[name].texture;
+                        BLOCKS[
+                            name
+                        ].texture;
 
                     img.style.width =
                         "100%";
@@ -1817,7 +1450,9 @@
                         );
 
                     label.textContent =
-                        BLOCKS[name].name;
+                        BLOCKS[
+                            name
+                        ].name;
 
                     label.style.position =
                         "absolute";
@@ -1845,8 +1480,9 @@
 
                     count.textContent =
                         String(
-                            inventory[name] ||
-                            0
+                            inventory[
+                                name
+                            ] || 0
                         );
 
                     count.style.position =
@@ -1875,6 +1511,7 @@
                                 index;
 
                             updateHotbar();
+
                             updateInventory();
                         };
 
@@ -1890,7 +1527,9 @@
             inventoryOpen =
                 !inventoryOpen;
 
-            if (inventoryOpen) {
+            if (
+                inventoryOpen
+            ) {
 
                 inventoryPanel.style.display =
                     "grid";
@@ -1910,10 +1549,6 @@
                     "none";
             }
         }
-
-        /* =========================
-           CROSSHAIR
-        ========================= */
 
         var crosshair =
             document.createElement(
@@ -1951,10 +1586,6 @@
             crosshair
         );
 
-        /* =========================
-           TARGETING
-        ========================= */
-
         var raycaster =
             new THREE.Raycaster();
 
@@ -1964,7 +1595,8 @@
                 0
             );
 
-        var targetBlock = null;
+        var targetBlock =
+            null;
 
         function findTarget() {
 
@@ -1977,17 +1609,14 @@
 
             var objects = [];
 
-            blockNames.forEach(
+            Object.keys(
+                meshes
+            ).forEach(
                 function (name) {
 
-                    if (
+                    objects.push(
                         meshes[name]
-                    ) {
-
-                        objects.push(
-                            meshes[name]
-                        );
-                    }
+                    );
                 }
             );
 
@@ -1997,9 +1626,7 @@
                     false
                 );
 
-            if (
-                hits.length === 0
-            ) {
+            if (!hits.length) {
                 return;
             }
 
@@ -2007,7 +1634,8 @@
                 hits[0];
 
             if (
-                hit.distance > REACH
+                hit.distance >
+                REACH
             ) {
                 return;
             }
@@ -2026,33 +1654,58 @@
                 hit.instanceId;
 
             if (
-                instance === undefined ||
+                instance ===
+                    undefined ||
                 instance === null
             ) {
                 return;
             }
 
-            var block =
-                mesh.userData.blocks[
-                    instance
-                ];
+            var found =
+                null;
 
-            if (!block) {
+            var index = 0;
+
+            world.forEach(
+                function (block) {
+
+                    if (found) {
+                        return;
+                    }
+
+                    if (
+                        block.type !==
+                        type
+                    ) {
+                        return;
+                    }
+
+                    if (
+                        index ===
+                        instance
+                    ) {
+
+                        found =
+                            block;
+                    }
+
+                    index++;
+                }
+            );
+
+            if (!found) {
                 return;
             }
 
             targetBlock = {
 
-                block: block,
+                block:
+                    found,
 
                 normal:
                     hit.face.normal.clone()
             };
         }
-
-        /* =========================
-           HIGHLIGHT
-        ========================= */
 
         var highlightGeometry =
             new THREE.BoxGeometry(
@@ -2082,14 +1735,6 @@
 
         function updateHighlight() {
 
-            if (inventoryOpen) {
-
-                highlight.visible =
-                    false;
-
-                return;
-            }
-
             findTarget();
 
             if (!targetBlock) {
@@ -2113,11 +1758,7 @@
                 true;
         }
 
-        /* =========================
-           BREAK / PLACE
-        ========================= */
-
-        function rebuildWorld() {
+        function rebuild() {
 
             buildWorldMeshes();
         }
@@ -2127,14 +1768,9 @@
             function (event) {
 
                 if (
-                    inventoryOpen
-                ) {
-                    return;
-                }
-
-                if (
+                    inventoryOpen ||
                     document.pointerLockElement !==
-                    renderer.domElement
+                        renderer.domElement
                 ) {
                     return;
                 }
@@ -2147,8 +1783,6 @@
 
                 var block =
                     targetBlock.block;
-
-                /* LEFT CLICK - BREAK */
 
                 if (
                     event.button === 0
@@ -2169,15 +1803,14 @@
                             ] || 0
                         ) + 1;
 
-                    rebuildWorld();
+                    rebuild();
 
                     updateHotbar();
+
                     updateInventory();
 
                     return;
                 }
-
-                /* RIGHT CLICK - PLACE */
 
                 if (
                     event.button === 2
@@ -2189,12 +1822,7 @@
                         ];
 
                     if (
-                        !selected
-                    ) {
-                        return;
-                    }
-
-                    if (
+                        !selected ||
                         (
                             inventory[
                                 selected
@@ -2235,17 +1863,57 @@
                         return;
                     }
 
-                    /* Don't place inside player */
+                    var playerMinX =
+                        player.x -
+                        PLAYER_WIDTH / 2;
+
+                    var playerMaxX =
+                        player.x +
+                        PLAYER_WIDTH / 2;
+
+                    var playerMinZ =
+                        player.z -
+                        PLAYER_WIDTH / 2;
+
+                    var playerMaxZ =
+                        player.z +
+                        PLAYER_WIDTH / 2;
+
+                    var blockMinX =
+                        px - 0.5;
+
+                    var blockMaxX =
+                        px + 0.5;
+
+                    var blockMinZ =
+                        pz - 0.5;
+
+                    var blockMaxZ =
+                        pz + 0.5;
+
+                    var overlapsX =
+                        playerMaxX >
+                            blockMinX &&
+                        playerMinX <
+                            blockMaxX;
+
+                    var overlapsZ =
+                        playerMaxZ >
+                            blockMinZ &&
+                        playerMinZ <
+                            blockMaxZ;
+
+                    var overlapsY =
+                        player.y <
+                            py + 0.5 &&
+                        player.y +
+                            PLAYER_HEIGHT >
+                            py - 0.5;
 
                     if (
-                        overlapsPlayerBlock(
-                            player.x,
-                            player.y,
-                            player.z,
-                            px,
-                            py,
-                            pz
-                        )
+                        overlapsX &&
+                        overlapsZ &&
+                        overlapsY
                     ) {
                         return;
                     }
@@ -2261,9 +1929,10 @@
                         selected
                     ]--;
 
-                    rebuildWorld();
+                    rebuild();
 
                     updateHotbar();
+
                     updateInventory();
                 }
             }
@@ -2276,10 +1945,6 @@
                 event.preventDefault();
             }
         );
-
-        /* =========================
-           RESIZE
-        ========================= */
 
         window.addEventListener(
             "resize",
@@ -2306,10 +1971,6 @@
             }
         );
 
-        /* =========================
-           GAME LOOP
-        ========================= */
-
         var lastTime =
             performance.now();
 
@@ -2325,9 +1986,7 @@
 
             lastTime = now;
 
-            if (
-                dt > 0.05
-            ) {
+            if (dt > 0.05) {
                 dt = 0.05;
             }
 
